@@ -1,12 +1,12 @@
+// pages/api/reviews.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticated } from '../../lib/auth';
 import { supabaseAdmin } from '../../lib/supabaseClient';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest & { user: any }, res: NextApiResponse) {
     if (req.method === 'POST') {
-        const userId = (req.user as any).id;
+        const userId = req.user.id;
         const { orderId, rating, comment } = req.body;
-
         const { data, error } = await supabaseAdmin
             .from('reviews')
             .insert([{ order_id: orderId, reviewer_id: userId, rating, comment }])
@@ -14,17 +14,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             .single();
         if (error) return res.status(500).json({ error: 'Ошибка создания отзыва' });
 
-        // Обновляем статус заказа в completed
-        const { error: ordErr } = await supabaseAdmin
-            .from('orders')
-            .update({ status: 'completed' })
-            .eq('id', orderId);
-        if (ordErr) return res.status(500).json({ error: 'Ошибка обновления заказа' });
-
+        await supabaseAdmin.from('orders').update({ status: 'completed' }).eq('id', orderId);
         return res.status(201).json({ review: data });
     }
 
-    res.status(405).end();
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
 }
 
 export default authenticated(handler);

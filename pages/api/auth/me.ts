@@ -1,9 +1,10 @@
+// pages/api/auth/me.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticated } from '../../../lib/auth';
 import { supabaseAdmin } from '../../../lib/supabaseClient';
 
-async function me(req: NextApiRequest, res: NextApiResponse) {
-    const userId = (req.user as any).id;
+async function me(req: NextApiRequest & { user: any }, res: NextApiResponse) {
+    const userId = req.user.id;
     const { data, error } = await supabaseAdmin
         .from('users')
         .select('id, username, role, created_at')

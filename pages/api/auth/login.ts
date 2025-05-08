@@ -1,38 +1,177 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { SPWorlds } from 'spworlds';
-import jwt from 'jsonwebtoken';
-import { supabaseAdmin } from '../../../lib/supabaseClient';
+// pages/orders/[id].tsx
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import Layout from '../../components/Layout';
+import { supabase } from '../../lib/supabaseClient';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    if (req.method !== 'POST') return res.status(405).end();
-    const { cardId, cardToken } = req.body as { cardId: string; cardToken: string };
-    const sp = new SPWorlds({ id: cardId, token: cardToken });
+export default function OrderDetail() {
+    const router = useRouter();
+    const { id } = router.query as { id?: string };
+    const token = typeof window !== 'undefined' && localStorage.getItem('token');
 
-    try {
-        const account = await sp.getCardOwner();
+    const [order, setOrder] = useState<any>(null);
+    const [offers, setOffers] = useState<any[]>([]);
+    const [messages, setMessages] = useState<any[]>([]);
+    const [newOffer, setNewOffer] = useState({ price: 0, delivery_time: 1, message: '' });
+    const [chatText, setChatText] = useState('');
+    const [review, setReview] = useState({ rating: 5, comment: '' });
 
-        // Сохраняем или обновляем пользователя в Supabase
-        const { error: upsertError } = await supabaseAdmin
-            .from('users')
-            .upsert({
-                id: account.id,
-                username: account.username,
-                email: `${account.username}@spworlds`,
-                role: 'user',
-                created_at: account.createdAt
-            }, { onConflict: 'id' });
-        if (upsertError) throw upsertError;
+    // инициализация данных
+    useEffect(() => {
+        if (!id) return;
+        Promise.all([
+            fetch(`/api/orders/${id}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+            fetch(`/api/orders/${id}/offers`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+            fetch(`/api/messages?orderId=${id}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json())
+        ]).then(([o, of, m]) => {
+            setOrder(o.order);
+            setOffers(of.offers);
+            setMessages(m.messages);
+        });
 
-        // Генерируем JWT для нашего сайта
-        const token = jwt.sign(
-            { id: account.id, username: account.username },
-            process.env.JWT_SECRET!,
-            { expiresIn: '7d' }
-        );
+        // realtime-подписка на новые сообщения
+        const channel = supabase
+            .channel('public:messages')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'messages', filter: `order_id=eq.${id}` },
+                payload => setMessages(prev => [...prev, payload.new])
+            )
+            .subscribe();
 
-        return res.status(200).json({ token, user: { id: account.id, username: account.username } });
-    } catch (e) {
-        console.error('SPWorlds login error:', e);
-        return res.status(401).json({ error: 'Ошибка аутентификации через SPWorlds' });
-    }
+        return () => void supabase.removeChannel(channel);
+    }, [id]);
+
+    const postOffer = async () => {
+        await fetch(`/api/orders/${id}/offers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(newOffer)
+        });
+        router.replace(router.asPath);
+    };
+    const sendMessage = async () => {
+        await fetch(`/api/messages?orderId=${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ content: chatText })
+        });
+        setChatText('');
+    };
+    const acceptOffer = async (offerId: string) => {
+        await fetch(`/api/orders/${id}/offers/${offerId}/accept`, {
+            method: 'POST', headers: { Authorization: `Bearer ${token}` }
+        });
+        router.replace(router.asPath);
+    };
+    const submitReview = async () => {
+        await fetch('/api/reviews', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ orderId: id, ...review })
+        });
+        router.replace(router.asPath);
+    };
+
+    if (!order) return <Layout>Загрузка...</Layout>;
+
+    return (
+        <Layout>
+        <h1 className= "text-2xl font-bold mb-2" > { order.title } </h1>
+        < p className = "mb-4" > { order.description } </p>
+            < p className = "mb-6" > Бюджет: { order.budget } · Статус: { order.status } </p>
+
+    {/* Офферы */ }
+    <section className="mb-6" >
+        <h2 className="text-xl mb-2" > Офферы </h2>
+    {
+        offers.map(o => (
+            <div key= { o.id } className = "border p-4 mb-2" >
+            <p>Цена: { o.price } · Срок: { o.delivery_time } д.</p>
+        < p className = "mb-2" > { o.message } </p>
+            {
+                order.buyer_id === o.order_id && order.status === 'open' && (
+                    <button onClick={() => acceptOffer(o.id)} className = "bg-green-600 text-white px-3 py-1 rounded" >
+                        Принять
+                        </button>
+            )
+}
+</div>
+        ))}
+{
+    order.status === 'open' && (
+        <div className="mt-4 p-4 border" >
+            <h3 className="mb-2" > Отправить свой оффер </h3>
+                < input
+    type = "number" placeholder = "Цена" value = { newOffer.price }
+    onChange = { e => setNewOffer(v => ({ ...v, price: +e.target.value }))
+}
+className = "mb-2 p-2 border w-full"
+    />
+    <input
+              type="number" placeholder = "Срок (дни)" value = { newOffer.delivery_time }
+onChange = { e => setNewOffer(v => ({ ...v, delivery_time: +e.target.value }))}
+className = "mb-2 p-2 border w-full"
+    />
+    <textarea
+              placeholder="Сообщение" value = { newOffer.message }
+onChange = { e => setNewOffer(v => ({ ...v, message: e.target.value }))}
+className = "mb-2 p-2 border w-full"
+    />
+    <button onClick={ postOffer } className = "bg-blue-600 text-white px-4 py-2 rounded" >
+        Отправить оффер
+            </button>
+            </div>
+        )}
+</section>
+
+{/* Чат */ }
+<section className="mb-6" >
+    <h2 className="text-xl mb-2" > Чат </h2>
+        < div className = "h-48 p-3 border overflow-y-auto mb-2" >
+        {
+            messages.map(m => (
+                <div key= { m.id } > <strong>{ m.sender_id } < /strong>: {m.content}</div >
+          ))
+        }
+            </div>
+            < div className = "flex" >
+                <input
+            value={ chatText }
+onChange = { e => setChatText(e.target.value) }
+className = "flex-1 p-2 border"
+placeholder = "Сообщение"
+    />
+    <button onClick={ sendMessage } className = "ml-2 bg-blue-600 text-white px-4 py-2 rounded" >
+        Отправить
+        </button>
+        </div>
+        </section>
+
+{/* Отзыв */ }
+{
+    order.status === 'completed' && (
+        <section>
+        <h2 className="text-xl mb-2" > Оставить отзыв </h2>
+            < select
+    value = { review.rating }
+    onChange = { e => setReview(v => ({ ...v, rating: +e.target.value }))
+}
+className = "mb-2 p-2 border"
+    >
+    { [1, 2, 3, 4, 5].map(n => <option key={ n } value = { n } > { n } звёзд </option>) }
+    </select>
+    < textarea
+value = { review.comment }
+onChange = { e => setReview(v => ({ ...v, comment: e.target.value }))}
+className = "mb-2 p-2 border w-full"
+placeholder = "Комментарий"
+    />
+    <button onClick={ submitReview } className = "bg-green-600 text-white px-4 py-2 rounded" >
+        Отправить отзыв
+            </button>
+            </section>
+      )}
+</Layout>
+  );
 }

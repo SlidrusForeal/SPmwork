@@ -1,10 +1,11 @@
+// pages/api/orders/[orderId]/offers/index.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { authenticated } from '../../../../lib/auth';
-import { supabase } from '../../../../lib/supabaseClient';
+import { authenticated } from '../../../../../lib/auth';
+import { supabase } from '../../../../../lib/supabaseClient';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-    const orderId = req.query.id as string;
-    const userId = (req.user as any).id;
+async function handler(req: NextApiRequest & { user: any }, res: NextApiResponse) {
+    const { orderId } = req.query as { orderId: string };
+    const userId = req.user.id;
 
     if (req.method === 'GET') {
         const { data, error } = await supabase
@@ -17,7 +18,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (req.method === 'POST') {
-        const { price, delivery_time, message } = req.body;
+        const { price, delivery_time, message } = req.body as { price: number; delivery_time: number; message: string };
         const { data, error } = await supabase
             .from('offers')
             .insert([{ order_id: orderId, seller_id: userId, price, delivery_time, message }])
@@ -27,7 +28,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(201).json({ offer: data });
     }
 
-    res.status(405).end();
+    res.setHeader('Allow', ['GET', 'POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
 }
 
 export default authenticated(handler);

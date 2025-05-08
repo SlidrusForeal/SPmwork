@@ -1,9 +1,10 @@
+// pages/api/messages.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticated } from '../../lib/auth';
 import { supabase } from '../../lib/supabaseClient';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-    const userId = (req.user as any).id;
+async function handler(req: NextApiRequest & { user: any }, res: NextApiResponse) {
+    const userId = req.user.id;
     const orderId = req.query.orderId as string;
 
     if (req.method === 'GET') {
@@ -27,7 +28,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(201).json({ message: data });
     }
 
-    res.status(405).end();
+    res.setHeader('Allow', ['GET', 'POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
 }
 
 export default authenticated(handler);

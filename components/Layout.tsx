@@ -1,16 +1,15 @@
+// components/Layout.tsx
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<{ id: string; username: string } | null>(null);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
-            fetch('/api/auth/me', {
-                headers: { Authorization: `Bearer ${token}` }
-            })
+            fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
                 .then(r => r.json())
                 .then(data => setUser(data.user))
                 .catch(() => localStorage.removeItem('token'));

@@ -6,6 +6,12 @@
             "dom.iterable",
             "esnext"
         ],
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "*"
+            ]
+        },
         "skipLibCheck": true,
         "strict": true,
         "forceConsistentCasingInFileNames": true,
@@ -22,7 +28,8 @@
         "next-env.d.ts",
         "**/*.ts",
         "**/*.tsx",
-        "lib/**/*"
+        "lib/**/*",
+        "components/**/*"
     ],
     "exclude": [
         "node_modules"

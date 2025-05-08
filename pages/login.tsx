@@ -1,3 +1,4 @@
+// pages/login.tsx
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
@@ -44,7 +45,7 @@ export default function Login() {
                     className="mb-2 p-2 border"
                     required
                 />
-                <button type="submit" className="bg-blue-600 text-white p-2">
+                <button type="submit" className="bg-blue-600 text-white p-2 rounded">
                     Войти
                 </button>
             </form>

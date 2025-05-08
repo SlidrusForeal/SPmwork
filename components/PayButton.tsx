@@ -1,3 +1,4 @@
+// components/PayButton.tsx
 import { useState } from 'react';
 
 export default function PayButton({

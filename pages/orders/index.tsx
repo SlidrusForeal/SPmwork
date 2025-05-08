@@ -1,35 +1,34 @@
-import { useEffect, useState } from 'react';
-import Layout from '../../components/Layout';
-import Link from 'next/link';
+// pages/api/orders/index.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { authenticated } from '../../../lib/auth';
+import { supabase } from '../../../lib/supabaseClient';
 
-export default function OrdersList() {
-    const [orders, setOrders] = useState<any[]>([]);
+async function handler(req: NextApiRequest & { user: any }, res: NextApiResponse) {
+    const userId = req.user.id;
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        fetch('/api/orders', {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-            .then(r => r.json())
-            .then(data => setOrders(data.orders));
-    }, []);
+    if (req.method === 'GET') {
+        const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .or(`status.eq.open,buyer_id.eq.${userId}`)
+            .order('created_at', { ascending: false });
+        if (error) return res.status(500).json({ error: 'Ошибка получения заказов' });
+        return res.status(200).json({ orders: data });
+    }
 
-    return (
-        <Layout>
-            <h1 className="text-2xl mb-4">Заказы</h1>
-            <Link href="/orders/create">
-                <a className="inline-block mb-6 bg-green-600 text-white px-4 py-2 rounded">
-                    Новый заказ
-                </a>
-            </Link>
-            {orders.map(o => (
-                <div key={o.id} className="p-4 border mb-4">
-                    <Link href={`/orders/${o.id}`}>
-                        <a className="text-xl font-semibold">{o.title}</a>
-                    </Link>
-                    <p>Бюджет: {o.budget} · Статус: {o.status}</p>
-                </div>
-            ))}
-        </Layout>
-    );
+    if (req.method === 'POST') {
+        const { title, description, category, budget } = req.body;
+        const { data, error } = await supabase
+            .from('orders')
+            .insert([{ buyer_id: userId, title, description, category, budget }])
+            .select()
+            .single();
+        if (error) return res.status(500).json({ error: 'Ошибка создания заказа' });
+        return res.status(201).json({ order: data });
+    }
+
+    res.setHeader('Allow', ['GET', 'POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
 }
+
+export default authenticated(handler);
