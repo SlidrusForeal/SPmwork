@@ -1,4 +1,3 @@
-// pages/api/init-payment.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { sp } from '../../lib/spworlds';
 
@@ -16,17 +15,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     name: `Order #${orderId}`,
                     count: '1',
                     price: amount.toString(),
-                    comment: `Freelance-заказ ${orderId}`
-                }
+                    comment: `Freelance-заказ ${orderId}`,
+                },
             ],
             redirectUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/success?order=${orderId}`,
             webhookUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhook`,
-            data: orderId
+            data: orderId,
         });
 
-        res.status(200).json({ url });
+        return res.status(200).json({ url });
     } catch (e) {
         console.error('SP initPayment error:', e);
-        res.status(500).json({ error: 'Payment init failed' });
+        return res.status(500).json({ error: 'Payment init failed' });
     }
 }

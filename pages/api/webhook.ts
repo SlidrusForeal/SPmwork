@@ -1,7 +1,6 @@
-// pages/api/webhook.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { sp } from '../../lib/spworlds';
-import { updateOrderStatus } from '../../lib/db';
+import { supabaseAdmin } from '../../lib/supabaseClient';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const hash = req.headers['x-body-hash'] as string;
@@ -12,15 +11,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: orderId, amount, card_number } = req.body as any;
 
     try {
-        await updateOrderStatus(orderId, {
-            status: 'paid',
-            paidAmount: parseFloat(amount),
-            paidAt: new Date(),
-            payerCard: card_number
-        });
-        res.status(200).end('OK');
+        // Обновляем информацию о платеже (если нужны столбцы paid_amount, paid_at, payer_card)
+        await supabaseAdmin
+            .from('orders')
+            .update({
+                status: 'in_progress',
+                paid_amount: parseFloat(amount),
+                paid_at: new Date().toISOString(),
+                payer_card: card_number
+            })
+            .eq('id', orderId);
+
+        return res.status(200).end('OK');
     } catch (e) {
         console.error('Webhook handling error:', e);
-        res.status(500).end('Internal error');
+        return res.status(500).end('Internal error');
     }
 }
