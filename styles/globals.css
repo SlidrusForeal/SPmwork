@@ -23,13 +23,16 @@
 @layer components {
   /* Кнопки */
   .btn {
-    @apply inline-block font-medium rounded-md transition-colors;
+    /* раньше было rounded-md */
+    @apply inline-block font-medium rounded-none transition-colors;
   }
+
   .btn-primary {
-    @apply btn bg-blue-600 text-white hover:bg-blue-700;
+    @apply bg-primary text-white hover:bg-primary-dark;
   }
+
   .btn-secondary {
-    @apply btn bg-gray-600 text-white hover:bg-gray-700;
+    @apply bg-secondary text-white hover:bg-secondary-dark;
   }
 
   /* Карточки */

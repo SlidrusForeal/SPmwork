@@ -35,7 +35,7 @@ export function getDiscordAuthUrl() {
 
 // 2) Отработать callback: code → access_token → профиль → карта SPWorlds → JWT+кука
 export async function handleDiscordCallback(code: string) {
-  // обмен code → токен
+  // 1) обмен code → токен
   const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -47,24 +47,29 @@ export async function handleDiscordCallback(code: string) {
       redirect_uri: `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`,
     }),
   });
-
   const tokenText = await tokenRes.text();
   if (!tokenRes.ok) {
-    console.error("Error fetching Discord token:", tokenText);
-    throw new Error(`Discord token error: ${tokenRes.status}`);
+    console.error(
+      "Discord token endpoint returned non-JSON:",
+      tokenRes.status,
+      tokenText
+    );
+    throw new Error(`Token exchange failed: ${tokenRes.status}`);
   }
   const { access_token } = JSON.parse(tokenText);
 
-  // получить профиль Discord
-
-  // получение профиля Discord
+  // 2) получение профиля
   const userRes = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${access_token}` },
   });
   const userText = await userRes.text();
   if (!userRes.ok) {
-    console.error("Error fetching Discord user:", userText);
-    throw new Error(`Discord user error: ${userRes.status}`);
+    console.error(
+      "Discord user endpoint returned non-JSON:",
+      userRes.status,
+      userText
+    );
+    throw new Error(`User fetch failed: ${userRes.status}`);
   }
   const { id: discordId, username } = JSON.parse(userText);
 

@@ -22,7 +22,7 @@ export default async function handler(
     res.setHeader("Set-Cookie", cookie);
     return res.redirect("/orders");
   } catch (err: any) {
-    console.error("Discord OAuth error:", err);
+    console.error("Full OAuth error:", err);
     return res
       .status(500)
       .send(`Ошибка авторизации через Discord: ${err.message}`);
