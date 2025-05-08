@@ -10,6 +10,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   );
   const [dark, setDark] = useState(false);
 
+  // Получение информации о пользователе
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -20,6 +21,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Применение темы
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
@@ -28,6 +30,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("token");
     setUser(null);
     supabase.auth.signOut();
+  };
+
+  const handleLogin = () => {
+    // сразу редиректим на Discord OAuth
+    window.location.assign("/api/auth/discord/login");
   };
 
   return (
@@ -66,12 +73,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </button>
               </>
             ) : (
-              <Link
-                href="/login"
+              <button
+                onClick={handleLogin}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
-                Войти
-              </Link>
+                Войти через Discord
+              </button>
             )}
             <button
               onClick={() => setDark((d) => !d)}
@@ -82,10 +89,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
       </header>
+
       <main className="flex-grow container mx-auto p-6">{children}</main>
+
       <footer className="bg-gray-100 dark:bg-gray-800 py-4">
         <div className="container mx-auto text-center text-sm text-gray-600 dark:text-gray-400">
-          © {new Date().getFullYear()} SPmwork. Все права защищены.
+          © {new Date().getFullYear()} SPmwork. Все права защищены.
         </div>
       </footer>
     </div>
