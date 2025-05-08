@@ -1,34 +1,40 @@
-// pages/api/orders/index.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { authenticated } from '../../../lib/auth';
-import { supabase } from '../../../lib/supabaseClient';
+// pages/orders/index.tsx
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import Layout from '../../components/Layout';
 
-async function handler(req: NextApiRequest & { user: any }, res: NextApiResponse) {
-    const userId = req.user.id;
+export default function OrdersList() {
+  const [orders, setOrders] = useState<any[]>([]);
 
-    if (req.method === 'GET') {
-        const { data, error } = await supabase
-            .from('orders')
-            .select('*')
-            .or(`status.eq.open,buyer_id.eq.${userId}`)
-            .order('created_at', { ascending: false });
-        if (error) return res.status(500).json({ error: 'Ошибка получения заказов' });
-        return res.status(200).json({ orders: data });
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetch('/api/orders', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(res => res.json())
+        .then(data => setOrders(data.orders))
+        .catch(console.error);
     }
+  }, []);
 
-    if (req.method === 'POST') {
-        const { title, description, category, budget } = req.body;
-        const { data, error } = await supabase
-            .from('orders')
-            .insert([{ buyer_id: userId, title, description, category, budget }])
-            .select()
-            .single();
-        if (error) return res.status(500).json({ error: 'Ошибка создания заказа' });
-        return res.status(201).json({ order: data });
-    }
-
-    res.setHeader('Allow', ['GET', 'POST']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  return (
+    <Layout>
+      <h1 className="text-2xl mb-4">Заказы</h1>
+      <Link
+        href="/orders/create"
+        className="inline-block mb-6 bg-green-600 text-white px-4 py-2 rounded"
+      >
+        Новый заказ
+      </Link>
+      {orders.map(o => (
+        <div key={o.id} className="p-4 border mb-4">
+          <Link href={`/orders/${o.id}`} className="text-xl font-semibold">
+            {o.title}
+          </Link>
+          <p>Бюджет: {o.budget} · Статус: {o.status}</p>
+        </div>
+      ))}
+    </Layout>
+  );
 }
-
-export default authenticated(handler);
