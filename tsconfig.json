@@ -31,7 +31,7 @@
     "**/*.tsx",
     "lib/**/*",
     "components/**/*"
-  ],
+, "lib"  ],
   "exclude": [
     "node_modules"
   ]
