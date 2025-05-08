@@ -1,7 +1,9 @@
 // middleware.ts
 import { NextResponse, type NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
-
+export const config = {
+  matcher: ["/orders/:path*"],
+};
 export function middleware(req: NextRequest) {
   const { cookies, nextUrl } = req;
   const token = cookies.get("token")?.value;
