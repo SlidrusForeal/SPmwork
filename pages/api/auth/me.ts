@@ -1,7 +1,7 @@
 // pages/api/auth/me.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticated } from '../../../lib/auth';
-import { supabaseAdmin } from '../../../lib/supabaseClient';
+import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 
 async function me(req: NextApiRequest & { user: any }, res: NextApiResponse) {
     const userId = req.user.id;

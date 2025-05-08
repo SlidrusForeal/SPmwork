@@ -1,7 +1,7 @@
 // pages/api/reviews.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticated } from '../../lib/auth';
-import { supabaseAdmin } from '../../lib/supabaseClient';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 
 async function handler(req: NextApiRequest & { user: any }, res: NextApiResponse) {
     if (req.method === 'POST') {

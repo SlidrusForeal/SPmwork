@@ -1,7 +1,8 @@
 // pages/api/orders/[orderId]/offers/[offerId]/accept.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { authenticated } from '../../../../../lib/auth';
-import { supabase, supabaseAdmin } from '../../../../../lib/supabaseClient';
+import { authenticated } from '../../../../../../lib/auth';
+import { supabase }      from '../../../../../../lib/supabaseClient';
+import { supabaseAdmin } from '../../../../../../lib/supabaseAdmin';
 
 async function handler(req: NextApiRequest & { user: any }, res: NextApiResponse) {
     if (req.method !== 'POST') {

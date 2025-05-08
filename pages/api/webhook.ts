@@ -1,7 +1,7 @@
 // pages/api/webhook.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { sp } from '../../lib/spworlds';
-import { supabaseAdmin } from '../../lib/supabaseClient';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const hash = req.headers['x-body-hash'] as string;
