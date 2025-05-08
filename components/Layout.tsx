@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ id: string; username: string } | null>(
