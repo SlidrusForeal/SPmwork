@@ -26,7 +26,7 @@ if (
 export function getDiscordAuthUrl() {
   const params = new URLSearchParams({
     client_id: DISCORD_CLIENT_ID!,
-    redirect_uri: `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`,
+    redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`,
     response_type: "code",
     scope: "identify",
   });
