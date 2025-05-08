@@ -47,31 +47,44 @@ export async function handleDiscordCallback(code: string) {
       redirect_uri: `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`,
     }),
   });
+
+  // Читаем текст вместо .json()
   const tokenText = await tokenRes.text();
+  console.error(">>> Discord /token response status:", tokenRes.status);
+  console.error(">>> Discord /token response body:\n", tokenText);
+
   if (!tokenRes.ok) {
-    console.error(
-      "Discord token endpoint returned non-JSON:",
-      tokenRes.status,
-      tokenText
-    );
+    // сразу выбрасываем с подробностями
     throw new Error(`Token exchange failed: ${tokenRes.status}`);
   }
-  const { access_token } = JSON.parse(tokenText);
+  let parsed;
+  try {
+    parsed = JSON.parse(tokenText);
+  } catch (e) {
+    console.error("JSON.parse error on tokenText:", e);
+    throw new Error("Failed to parse Discord token JSON");
+  }
+  const { access_token } = parsed;
 
   // 2) получение профиля
   const userRes = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${access_token}` },
   });
   const userText = await userRes.text();
+  console.error(">>> Discord /users/@me response status:", userRes.status);
+  console.error(">>> Discord /users/@me response body:\n", userText);
+
   if (!userRes.ok) {
-    console.error(
-      "Discord user endpoint returned non-JSON:",
-      userRes.status,
-      userText
-    );
     throw new Error(`User fetch failed: ${userRes.status}`);
   }
-  const { id: discordId, username } = JSON.parse(userText);
+  let userJson;
+  try {
+    userJson = JSON.parse(userText);
+  } catch (e) {
+    console.error("JSON.parse error on userText:", e);
+    throw new Error("Failed to parse Discord user JSON");
+  }
+  const { id: discordId, username } = userJson;
 
   // найти карту SPWorlds по Discord ID
   const sp = new SPWorlds({
