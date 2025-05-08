@@ -21,10 +21,10 @@ export default async function handler(
     const cookie = await handleDiscordCallback(code);
     res.setHeader("Set-Cookie", cookie);
     return res.redirect("/orders");
-  } catch (e: any) {
-    console.error("Discord OAuth error:", e);
+  } catch (err: any) {
+    console.error("Discord OAuth error:", err);
     return res
       .status(500)
-      .send("Ошибка авторизации через Discord. Попробуйте ещё раз.");
+      .send(`Ошибка авторизации через Discord: ${err.message}`);
   }
 }

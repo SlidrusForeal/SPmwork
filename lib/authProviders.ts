@@ -47,13 +47,26 @@ export async function handleDiscordCallback(code: string) {
       redirect_uri: `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`,
     }),
   });
-  const { access_token } = await tokenRes.json();
+
+  const tokenText = await tokenRes.text();
+  if (!tokenRes.ok) {
+    console.error("Error fetching Discord token:", tokenText);
+    throw new Error(`Discord token error: ${tokenRes.status}`);
+  }
+  const { access_token } = JSON.parse(tokenText);
 
   // получить профиль Discord
+
+  // получение профиля Discord
   const userRes = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${access_token}` },
   });
-  const { id: discordId, username } = await userRes.json();
+  const userText = await userRes.text();
+  if (!userRes.ok) {
+    console.error("Error fetching Discord user:", userText);
+    throw new Error(`Discord user error: ${userRes.status}`);
+  }
+  const { id: discordId, username } = JSON.parse(userText);
 
   // найти карту SPWorlds по Discord ID
   const sp = new SPWorlds({
