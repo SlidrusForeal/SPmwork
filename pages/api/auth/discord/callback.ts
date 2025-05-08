@@ -30,16 +30,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { id: discordId, username } = await userRes.json();
 
   // 3) Находим карту SPWorlds по Discord ID
-  const userCard = await sp.findUser(discordId);
+const userCard = await sp.findUser(discordId);
 
-  // 4) Сохраняем/обновляем юзера
-  await supabaseAdmin.from('users').upsert({
-    id: userCard.uuid,
-    username,
-    email: `${username}@spworlds`,
-    role: 'user',
-    created_at: new Date().toISOString()
-  }, { onConflict: 'id' });
+if (!userCard) {
+  // Если карта не найдена — возвращаем 404 или перенаправляем на страницу ошибки
+  return res.status(404).json({ error: 'Карта SPWorlds не найдена для этого Discord ID' });
+}
+
+// 4) Сохраняем/обновляем юзера
+await supabaseAdmin.from('users').upsert({
+  id: userCard.uuid,
+  username,
+  email: `${username}@spworlds`,
+  role: 'user',
+  created_at: new Date().toISOString()
+}, { onConflict: 'id' });
 
   // 5) Генерим JWT и редиректим
   const token = jwt.sign(
