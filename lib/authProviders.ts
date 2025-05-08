@@ -1,19 +1,23 @@
 // lib/authProviders.ts
-import { SPWorlds } from 'spworlds';
-import fetch from 'node‐fetch';
-import { serialize } from 'cookie';
-import jwt from 'jsonwebtoken';
-import { supabaseAdmin } from './supabaseAdmin';
+import { SPWorlds } from "spworlds";
+import { serialize } from "cookie";
+import jwt from "jsonwebtoken";
+import { supabaseAdmin } from "./supabaseAdmin";
 
 const {
   NEXT_PUBLIC_BASE_URL,
   DISCORD_CLIENT_ID,
   DISCORD_CLIENT_SECRET,
-  JWT_SECRET
+  JWT_SECRET,
 } = process.env;
 
-if (!NEXT_PUBLIC_BASE_URL || !DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET || !JWT_SECRET) {
-  throw new Error('❌ Не заданы env‑переменные для OAuth или JWT_SECRET');
+if (
+  !NEXT_PUBLIC_BASE_URL ||
+  !DISCORD_CLIENT_ID ||
+  !DISCORD_CLIENT_SECRET ||
+  !JWT_SECRET
+) {
+  throw new Error("❌ Не заданы env‑переменные для OAuth или JWT_SECRET");
 }
 
 // 1) Сформировать URL для редиректа на Discord
@@ -21,8 +25,8 @@ export function getDiscordAuthUrl() {
   const params = new URLSearchParams({
     client_id: DISCORD_CLIENT_ID!,
     redirect_uri: `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`,
-    response_type: 'code',
-    scope: 'identify'
+    response_type: "code",
+    scope: "identify",
   });
   return `https://discord.com/api/oauth2/authorize?${params}`;
 }
@@ -30,57 +34,59 @@ export function getDiscordAuthUrl() {
 // 2) Отработать callback: code → access_token → профиль → карта SPWorlds → JWT+кука
 export async function handleDiscordCallback(code: string) {
   // обмен code → токен
-  const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: DISCORD_CLIENT_ID!,
       client_secret: DISCORD_CLIENT_SECRET!,
-      grant_type: 'authorization_code',
+      grant_type: "authorization_code",
       code,
-      redirect_uri: `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`
-    })
+      redirect_uri: `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`,
+    }),
   });
   const { access_token } = await tokenRes.json();
 
   // получить профиль Discord
-  const userRes = await fetch('https://discord.com/api/users/@me', {
-    headers: { Authorization: `Bearer ${access_token}` }
+  const userRes = await fetch("https://discord.com/api/users/@me", {
+    headers: { Authorization: `Bearer ${access_token}` },
   });
   const { id: discordId, username } = await userRes.json();
 
   // найти карту SPWorlds по Discord ID
-  const sp = new SPWorlds({ id: process.env.SPWORLDS_ID!, token: process.env.SPWORLDS_TOKEN! });
+  const sp = new SPWorlds({
+    id: process.env.SPWORLDS_ID!,
+    token: process.env.SPWORLDS_TOKEN!,
+  });
   const userCard = await sp.findUser(discordId);
   if (!userCard) {
-    throw new Error('Карта SPWorlds не найдена для этого Discord ID');
+    throw new Error("Карта SPWorlds не найдена для этого Discord ID");
   }
 
   // upsert юзера в БД
-  await supabaseAdmin
-    .from('users')
-    .upsert({
+  await supabaseAdmin.from("users").upsert(
+    {
       id: userCard.uuid,
       username,
       email: `${username}@spworlds`,
-      role: 'user',
-      created_at: new Date().toISOString()
-    }, { onConflict: 'id' });
-
-  // сгенерировать JWT
-  const token = jwt.sign(
-    { id: userCard.uuid, username },
-    JWT_SECRET!,
-    { expiresIn: '7d' }
+      role: "user",
+      created_at: new Date().toISOString(),
+    },
+    { onConflict: "id" }
   );
 
+  // сгенерировать JWT
+  const token = jwt.sign({ id: userCard.uuid, username }, JWT_SECRET!, {
+    expiresIn: "7d",
+  });
+
   // упаковать куку
-  const cookie = serialize('token', token, {
+  const cookie = serialize("token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 7
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
   });
 
   return cookie;
