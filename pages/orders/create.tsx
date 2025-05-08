@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import Layout from "../../components/Layout";
+import { Input, Textarea, Button } from "../../components/ui";
 
 export default function CreateOrder() {
   const [form, setForm] = useState({
@@ -28,38 +29,41 @@ export default function CreateOrder() {
 
   return (
     <Layout>
-      <h1 className="text-2xl mb-4">Создать заказ</h1>
-      <form onSubmit={submit} className="flex flex-col max-w-lg">
-        <input
-          placeholder="Заголовок"
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          className="form-input mb-2"
-          required
-        />
-        <textarea
-          placeholder="Описание"
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          className="btn-primary"
-        />
-        <input
-          placeholder="Категория"
-          value={form.category}
-          onChange={(e) => setForm({ ...form, category: e.target.value })}
-          className="form-input mb-2"
-        />
-        <input
-          type="number"
-          placeholder="Бюджет"
-          value={form.budget}
-          onChange={(e) => setForm({ ...form, budget: +e.target.value })}
-          className="form-input mb-2"
-          required
-        />
-        <button type="submit" className="bg-blue-600 text-white p-2 rounded">
-          Создать
-        </button>
+      <h1 className="text-3xl font-bold mb-6">Создать заказ</h1>
+      <form onSubmit={submit} className="space-y-4 max-w-lg">
+        <div>
+          <label className="block text-sm font-medium mb-1">Заголовок</label>
+          <Input
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Описание</label>
+          <Textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Категория</label>
+          <Input
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Бюджет</label>
+          <Input
+            type="number"
+            value={form.budget}
+            onChange={(e) => setForm({ ...form, budget: +e.target.value })}
+            required
+          />
+        </div>
+        <Button type="submit">Создать</Button>
       </form>
     </Layout>
   );

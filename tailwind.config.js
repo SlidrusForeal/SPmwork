@@ -1,12 +1,52 @@
-// tailwind.config.js
-/** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}"
+    './pages/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}',
+    './components/ui/**/*.{js,ts,jsx,tsx}'
   ],
-  theme: { extend: {} },
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          light: '#4f8df7',
+          DEFAULT: '#1e6edc',
+          dark: '#155aba',
+        },
+        secondary: {
+          light: '#f7c14f',
+          DEFAULT: '#dc9e1e',
+          dark: '#ba7c15',
+        },
+        accent: '#f05d5e',
+        neutral: {
+          100: '#f5f5f5',
+          200: '#eeeeee',
+          300: '#e0e0e0',
+          400: '#bdbdbd',
+          500: '#9e9e9e',
+          600: '#757575',
+          700: '#616161',
+          800: '#424242',
+          900: '#212121',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+        serif: ['Merriweather', 'ui-serif', 'Georgia'],
+        mono: ['Fira Code', 'ui-monospace', 'SFMono-Regular'],
+      },
+      borderRadius: {
+        lg: '1rem',
+        xl: '1.5rem',
+      },
+      transitionDuration: {
+        DEFAULT: '200ms',
+      },
+    },
+  },
   plugins: [
-    require('@tailwindcss/forms'),  // ← подключили плагин
-  ]
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/typography'),
+  ],
 };
