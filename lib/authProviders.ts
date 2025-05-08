@@ -9,6 +9,8 @@ const {
   DISCORD_CLIENT_ID,
   DISCORD_CLIENT_SECRET,
   JWT_SECRET,
+  SPWORLDS_ID,
+  SPWORLDS_TOKEN,
 } = process.env;
 
 if (
