@@ -1,25 +1,27 @@
 // components/Layout.tsx
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<{ id: string; username: string } | null>(null);
+  const [user, setUser] = useState<{ id: string; username: string } | null>(
+    null
+  );
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
-      fetch('/api/auth/me', {
+      fetch("/api/auth/me", {
         headers: { Authorization: `Bearer ${token}` },
       })
-        .then(res => res.json())
-        .then(data => setUser(data.user))
-        .catch(() => localStorage.removeItem('token'));
+        .then((res) => res.json())
+        .then((data) => setUser(data.user))
+        .catch(() => localStorage.removeItem("token"));
     }
   }, []);
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
     setUser(null);
     supabase.auth.signOut();
   };
@@ -39,7 +41,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <button onClick={logout}>Выйти</button>
           </>
         ) : (
-          <Link href="/login">Войти</Link>
+          <Link href="/login" className="btn-primary">
+            Войти
+          </Link>
         )}
       </nav>
       <main className="container mx-auto p-4">{children}</main>
