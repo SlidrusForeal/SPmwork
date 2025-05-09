@@ -32,7 +32,7 @@ const Home: NextPage<HomeProps> = ({ orders }) => {
       {/* Hero */}
       <section className="bg-primary text-white py-20 px-6 text-center rounded-lg mb-16">
         <h1 className="text-4xl md:text-5xl font-bold mb-4">
-          Найди рабочего для своих потребностей!
+          Найди рабочего для своих нужд на #СПм!
         </h1>
         <p className="text-lg mb-8">
           Ресурсы, постройки, скины, арты, мапарты и многое другое — всё в одном
@@ -125,10 +125,10 @@ export const getServerSideProps: GetServerSideProps<HomeProps> = async () => {
     console.error("Ошибка при загрузке заказов:", error.message);
   }
 
-  const orders: Order[] = data ?? [];
-
   return {
-    props: { orders },
+    props: {
+      orders: data ?? [],
+    },
   };
 };
 
