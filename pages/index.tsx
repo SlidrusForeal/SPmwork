@@ -4,6 +4,8 @@ import Head from "next/head";
 import Link from "next/link";
 import Layout from "../components/Layout";
 import { Card, Button } from "../components/ui";
+import Image from "next/image";
+import { useState, useEffect } from "react";
 import { ShieldCheck, MessageSquare, DollarSign } from "lucide-react";
 import { supabaseAdmin } from "../lib/supabaseAdmin";
 
@@ -19,6 +21,23 @@ interface HomeProps {
 }
 
 const Home: NextPage<HomeProps> = ({ orders }) => {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    setIsDark(document.documentElement.classList.contains("dark"));
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <Layout>
       <Head>
@@ -93,8 +112,17 @@ const Home: NextPage<HomeProps> = ({ orders }) => {
                   </p>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>
-                    Бюджет: <strong>{o.budget} AR</strong>
+                  <span className="flex items-center">
+                    Бюджет:&nbsp;
+                    <strong className="flex items-center">
+                      {o.budget}&nbsp;
+                      <Image
+                        src={isDark ? "/chernyar.webp" : "/bleiyar.webp"}
+                        alt="AR"
+                        width={20}
+                        height={20}
+                      />
+                    </strong>
                   </span>
                   <Link href={`/orders/${o.id}`}>
                     <a>
@@ -121,9 +149,7 @@ export const getServerSideProps: GetServerSideProps<HomeProps> = async () => {
     .order("created_at", { ascending: false })
     .limit(8);
 
-  if (error) {
-    console.error("Ошибка при загрузке заказов:", error.message);
-  }
+  if (error) console.error("Ошибка при загрузке заказов:", error.message);
 
   return {
     props: {
