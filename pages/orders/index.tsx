@@ -29,12 +29,12 @@ export default function OrdersPage() {
     fetcher
   );
 
-  // 2) Вычисляем производные состояния до любых return
+  // 2) Производные состояния
   const orders = data ? data.flatMap((page) => page.orders) : [];
   const total = data?.[0]?.total ?? 0;
   const isReachingEnd = orders.length >= total;
 
-  // 3) Объявляем все хуки useRef и useCallback последовательно
+  // 3) Инфинит‑скролл
   const observer = useRef<IntersectionObserver>();
   const lastRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -50,11 +50,16 @@ export default function OrdersPage() {
     [isValidating, isReachingEnd, size, setSize]
   );
 
-  // 4) Рендерим skeleton, если ещё нет данных и идёт загрузка
+  // 4) Skeleton‑заглушка
   if (!data && isValidating) {
     return (
       <Layout>
-        <div className="orders-grid">
+        <div
+          className="grid gap-6"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          }}
+        >
           {Array.from({ length: PAGE_SIZE }).map((_, i) => (
             <Card key={i} className="p-6">
               <Skeleton height={24} width="60%" style={{ marginBottom: 12 }} />
@@ -84,7 +89,12 @@ export default function OrdersPage() {
       {orders.length === 0 ? (
         <p>Ничего не найдено</p>
       ) : (
-        <section className="orders-grid">
+        <section
+          className="grid gap-6"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          }}
+        >
           {orders.map((order, idx) => {
             const card = (
               <Card className="p-6">
@@ -105,7 +115,6 @@ export default function OrdersPage() {
                 </Button>
               </Card>
             );
-            // Присоединяем ref к последнему элементу для бесконечной загрузки
             return idx === orders.length - 1 ? (
               <div key={order.id} ref={lastRef}>
                 {card}
