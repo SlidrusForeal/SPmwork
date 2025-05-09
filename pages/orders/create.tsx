@@ -15,15 +15,23 @@ export default function CreateOrder() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-    await fetch("/api/orders", {
+    // Отправляем запрос с аутентификацией через cookie (same-origin)
+    const res = await fetch("/api/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
+      credentials: "same-origin",
       body: JSON.stringify(form),
     });
+
+    if (!res.ok) {
+      const error = await res.json();
+      console.error("Ошибка создания заказа:", error);
+      // Здесь можно отобразить сообщение об ошибке пользователю
+      return;
+    }
+
     router.push("/orders");
   };
 
@@ -39,6 +47,7 @@ export default function CreateOrder() {
             required
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">Описание</label>
           <Textarea
@@ -47,6 +56,7 @@ export default function CreateOrder() {
             required
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">Категория</label>
           <Input
@@ -54,6 +64,7 @@ export default function CreateOrder() {
             onChange={(e) => setForm({ ...form, category: e.target.value })}
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">Бюджет</label>
           <Input
@@ -63,6 +74,7 @@ export default function CreateOrder() {
             required
           />
         </div>
+
         <Button type="submit">Создать</Button>
       </form>
     </Layout>
