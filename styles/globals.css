@@ -21,15 +21,24 @@
 }
 
 @layer components {
-  /* Кнопки */
+  /* Универсальный класс для кнопок */
   .btn {
-    @apply inline-block font-medium rounded-none transition-colors;
+    @apply inline-block font-semibold rounded-lg transition-transform duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary;
   }
+
+  /* Основная кнопка */
   .btn-primary {
-    @apply bg-primary text-white hover:bg-primary-dark;
+    @apply bg-primary text-white px-6 py-3 shadow-md hover:bg-primary-dark hover:shadow-lg active:scale-95;
   }
+
+  /* Вторичная кнопка */
   .btn-secondary {
-    @apply bg-secondary text-white hover:bg-secondary-dark;
+    @apply bg-secondary text-white px-6 py-3 shadow-md hover:bg-secondary-dark hover:shadow-lg active:scale-95;
+  }
+
+  /* Прозрачная кнопка с рамкой */
+  .btn-ghost {
+    @apply bg-transparent border border-neutral-300 text-neutral-800 dark:border-neutral-600 dark:text-neutral-200 px-6 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-700 active:scale-95;
   }
 
   /* Карточки */
