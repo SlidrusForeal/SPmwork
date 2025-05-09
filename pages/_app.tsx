@@ -1,3 +1,4 @@
+// pages/_app.tsx
 "use client";
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
@@ -5,6 +6,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import ErrorBoundary from "../components/ErrorBoundary";
+
+// Новые импорты
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -41,6 +46,9 @@ export default function App({ Component, pageProps }: AppProps) {
           <Component {...pageProps} />
         </motion.div>
       </AnimatePresence>
+
+      <Analytics />
+      <SpeedInsights />
     </ErrorBoundary>
   );
 }
