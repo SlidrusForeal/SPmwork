@@ -16,23 +16,34 @@ export default apiHandler(async (req, res) => {
 
   const parse = InitPaymentSchema.safeParse(req.body);
   if (!parse.success) {
-    return res.status(400).json({ error: parse.error.format() });
+    return res
+      .status(400)
+      .json({ error: "Неверные параметры", details: parse.error.format() });
   }
   const { orderId, amount } = parse.data;
 
-  const { url } = await sp.initPayment({
-    items: [
-      {
-        name: `Заказ ${orderId}`,
-        count: 1,
-        price: amount,
-        comment: "",
-      },
-    ],
-    redirectUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/success?order=${orderId}`,
-    webhookUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhook`,
-    data: orderId,
-  });
-
-  return res.status(200).json({ url });
+  try {
+    const { url } = await sp.initPayment({
+      items: [
+        {
+          name: `Заказ ${orderId}`,
+          count: 1,
+          price: amount,
+          comment: "",
+        },
+      ],
+      redirectUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/success?order=${orderId}`,
+      webhookUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhook`,
+      data: orderId,
+    });
+    return res.status(200).json({ url });
+  } catch (e: any) {
+    // Если SPWorlds вернул 422 Unprocessable Entity, в e.response есть тело ответа
+    console.error("Ошибка SPWorlds initPayment:", e);
+    const status = e.statusCode || 500;
+    const message = e.message || "Ошибка платёжного API";
+    // попробуем достать детали из тела
+    const details = e.response?.body || null;
+    return res.status(status).json({ error: message, details });
+  }
 });
