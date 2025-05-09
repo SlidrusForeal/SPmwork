@@ -1,15 +1,16 @@
 // pages/_app.tsx
+"use client";
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
   useEffect(() => {
-    // Регистрируем sw.js только если он доступен
     if ("serviceWorker" in navigator) {
       fetch("/sw.js", { method: "HEAD" })
         .then((res) => {
@@ -21,7 +22,6 @@ export default function App({ Component, pageProps }: AppProps) {
         })
         .catch(() => {});
     }
-    // Запрос уведомлений, только если ранее не запрашивали
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().then((perm) => {
         console.log("Notification permission:", perm);
@@ -30,16 +30,18 @@ export default function App({ Component, pageProps }: AppProps) {
   }, []);
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={router.asPath}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.2 }}
-      >
-        <Component {...pageProps} />
-      </motion.div>
-    </AnimatePresence>
+    <ErrorBoundary>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={router.asPath}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          <Component {...pageProps} />
+        </motion.div>
+      </AnimatePresence>
+    </ErrorBoundary>
   );
 }
