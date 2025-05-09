@@ -10,7 +10,9 @@ export default async function handler(
   res: NextApiResponse
 ) {
   const codeParam = req.query.code as string | undefined;
+  console.log("Discord callback code:", codeParam);
   if (!codeParam) {
+    console.error("No code received from Discord");
     return res.redirect(getDiscordAuthUrl());
   }
   try {
