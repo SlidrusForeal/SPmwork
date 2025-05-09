@@ -58,37 +58,50 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto flex items-center justify-between py-4 px-6">
           <Link
             href="/"
-            className="text-2xl font-bold text-blue-600 dark:text-blue-400"
+            className="text-2xl font-bold text-blue-600 dark:text-blue-400 hover:text-primary transition-colors"
             onClick={handleNavClick}
           >
             SPmwork
           </Link>
 
-          <nav className="hidden md:flex items-center space-x-4">
-            <Link href="/" onClick={handleNavClick}>
+          <nav className="hidden md:flex items-center space-x-6">
+            <Link
+              href="/"
+              className="hover:text-primary transition-colors"
+              onClick={handleNavClick}
+            >
               Главная
             </Link>
-            <Link href="/orders" onClick={handleNavClick}>
+            <Link
+              href="/orders"
+              className="hover:text-primary transition-colors"
+              onClick={handleNavClick}
+            >
               Заказы
             </Link>
 
             {user ? (
               <div className="flex items-center space-x-3">
-                {user.spUsername && (
-                  <Image
-                    src={`https://minotar.net/avatar/${user.spUsername}/32`}
-                    width={32}
-                    height={32}
-                    alt="Голова игрока Minecraft"
-                    className="rounded-full"
-                  />
-                )}
-                <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded">
-                  Привет, <strong>{user.username}</strong>
-                </span>
+                <Link
+                  href="/profile"
+                  className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+                >
+                  {user.spUsername && (
+                    <Image
+                      src={`https://minotar.net/avatar/${user.spUsername}/32`}
+                      width={32}
+                      height={32}
+                      alt="Голова игрока Minecraft"
+                      className="rounded-full"
+                    />
+                  )}
+                  <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    Привет, <strong>{user.username}</strong>
+                  </span>
+                </Link>
                 <button
                   onClick={logout}
-                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
                 >
                   Выйти
                 </button>
@@ -96,7 +109,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             ) : (
               <button
                 onClick={handleLogin}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
               >
                 Войти через Discord
               </button>
@@ -104,7 +117,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
             <button
               onClick={toggleTheme}
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
               aria-label="Переключить тему"
             >
               {dark ? <Sun size={18} /> : <Moon size={18} />}
@@ -123,27 +136,44 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {mobileOpen && (
           <div className="md:hidden bg-white dark:bg-gray-800">
             <nav className="flex flex-col p-4 space-y-2">
-              <Link href="/" onClick={handleNavClick}>
+              <Link
+                href="/"
+                className="hover:text-primary transition-colors"
+                onClick={handleNavClick}
+              >
                 Главная
               </Link>
-              <Link href="/orders" onClick={handleNavClick}>
+              <Link
+                href="/orders"
+                className="hover:text-primary transition-colors"
+                onClick={handleNavClick}
+              >
                 Заказы
               </Link>
 
               {user ? (
                 <div className="flex flex-col space-y-2">
-                  {user.spUsername && (
-                    <Image
-                      src={`https://minotar.net/avatar/${user.spUsername}/32`}
-                      width={32}
-                      height={32}
-                      alt="Голова игрока Minecraft"
-                      className="rounded-full"
-                    />
-                  )}
+                  <Link
+                    href="/profile"
+                    className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+                    onClick={handleNavClick}
+                  >
+                    {user.spUsername && (
+                      <Image
+                        src={`https://minotar.net/avatar/${user.spUsername}/32`}
+                        width={32}
+                        height={32}
+                        alt="Голова игрока Minecraft"
+                        className="rounded-full"
+                      />
+                    )}
+                    <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                      Привет, <strong>{user.username}</strong>
+                    </span>
+                  </Link>
                   <button
                     onClick={logout}
-                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
                   >
                     Выйти
                   </button>
@@ -151,7 +181,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               ) : (
                 <button
                   onClick={handleLogin}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                 >
                   Войти через Discord
                 </button>
@@ -159,7 +189,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
               <button
                 onClick={toggleTheme}
-                className="mt-2 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded"
+                className="mt-2 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
                 {dark ? "Светлая тема" : "Тёмная тема"}
               </button>
