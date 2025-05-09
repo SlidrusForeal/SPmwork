@@ -1,4 +1,4 @@
-// types/next.d.ts
+// types/next.d.ts o
 import "next";
 
 declare module "next" {
