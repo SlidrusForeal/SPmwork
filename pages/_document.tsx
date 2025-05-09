@@ -6,10 +6,13 @@ export default class MyDocument extends Document {
     return (
       <Html lang="ru">
         <Head>
-          {/* Favicon */}
+          {/* Favicon для вкладки браузера */}
           <link rel="icon" href="/favicon.ico" />
           <link rel="shortcut icon" href="/favicon.ico" />
-
+          {/* Поддержка Apple */}
+          <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico" />
+          {/* Метаданные */}
+          <meta name="theme-color" content="#1e6edc" />
           {/* Скрипт до загрузки React, чтобы избежать «мигания» темы */}
           <script
             dangerouslySetInnerHTML={{
