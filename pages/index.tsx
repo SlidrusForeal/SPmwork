@@ -32,11 +32,11 @@ const Home: NextPage<HomeProps> = ({ orders }) => {
       {/* Hero */}
       <section className="bg-primary text-white py-20 px-6 text-center rounded-lg mb-16">
         <h1 className="text-4xl md:text-5xl font-bold mb-4">
-          Найди исполнителя для Minecraft‑задач
+          Найди рабочего для своих потребностей!
         </h1>
         <p className="text-lg mb-8">
-          Карты, плагины, скины и многое другое — всё в одном месте с гарантией
-          эскроу‑платежа.
+          Ресурсы, постройки, скины, арты, мапарты и многое другое — всё в одном
+          месте с гарантией эскроу‑платежа.
         </p>
         <Link href="/orders/create">
           <a className="inline-block bg-secondary hover:bg-secondary-dark text-white text-lg px-8 py-4 rounded">
