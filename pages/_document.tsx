@@ -6,6 +6,19 @@ export default class MyDocument extends Document {
     return (
       <Html lang="ru">
         <Head>
+          {/* Скрипт до загрузки React, чтобы избежать «мигания» темы */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function() {
+                  try {
+                    const isDark = localStorage.getItem('theme') === 'dark';
+                    document.documentElement.classList.toggle('dark', isDark);
+                  } catch(e) {}
+                })();
+              `,
+            }}
+          />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link
             rel="preconnect"

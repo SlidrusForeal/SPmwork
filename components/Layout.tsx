@@ -1,18 +1,15 @@
-// components/Layout.tsx
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { Sun, Moon } from "lucide-react";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Sun, Moon, Menu, X } from "lucide-react";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ id: string; username: string } | null>(
     null
   );
   const [dark, setDark] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Получение информации о пользователе
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -21,9 +18,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         .then((data) => setUser(data.user))
         .catch(() => localStorage.removeItem("token"));
     }
+    setDark(localStorage.getItem("theme") === "dark");
   }, []);
 
-  // Применение темы
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
@@ -35,7 +32,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const handleLogin = () => {
-    // сразу редиректим на Discord OAuth
     window.location.assign("/api/auth/discord/login");
   };
 
@@ -49,19 +45,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             SPmwork
           </Link>
-          <nav className="flex items-center space-x-4">
-            <Link
-              href="/"
-              className="hover:text-blue-600 dark:hover:text-blue-400"
-            >
-              Главная
-            </Link>
-            <Link
-              href="/orders"
-              className="hover:text-blue-600 dark:hover:text-blue-400"
-            >
-              Заказы
-            </Link>
+          <nav className="hidden md:flex items-center space-x-4">
+            <Link href="/">Главная</Link>
+            <Link href="/orders">Заказы</Link>
             {user ? (
               <>
                 <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded">
@@ -83,20 +69,50 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </button>
             )}
             <button
-              onClick={() => setDark((d) => !d)}
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+              onClick={() => {
+                setDark((d) => {
+                  const next = !d;
+                  localStorage.setItem("theme", next ? "dark" : "light");
+                  return next;
+                });
+              }}
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              aria-label="Переключить тему"
             >
               {dark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
           </nav>
+          <button
+            className="md:hidden p-2"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Меню"
+          >
+            {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
+        {mobileOpen && (
+          <div className="md:hidden bg-white dark:bg-gray-800">
+            <nav className="flex flex-col p-4 space-y-2">
+              <Link href="/">Главная</Link>
+              <Link href="/orders">Заказы</Link>
+              {user ? (
+                <button onClick={logout}>Выйти</button>
+              ) : (
+                <button onClick={handleLogin}>Войти через Discord</button>
+              )}
+              <button onClick={() => setDark((d) => !d)} className="mt-2">
+                {dark ? "Светлая тема" : "Тёмная тема"}
+              </button>
+            </nav>
+          </div>
+        )}
       </header>
 
       <main className="flex-grow container mx-auto p-6">{children}</main>
 
       <footer className="bg-gray-100 dark:bg-gray-800 py-4">
         <div className="container mx-auto text-center text-sm text-gray-600 dark:text-gray-400">
-          © {new Date().getFullYear()} SPmwork. Все права защищены.
+          © {new Date().getFullYear()} SPmwork. Все права защищены.
         </div>
       </footer>
     </div>

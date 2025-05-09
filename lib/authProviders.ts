@@ -1,40 +1,40 @@
 // lib/authProviders.ts
 import { serialize } from "cookie";
-import jwt from "jsonwebtoken";
+import { signToken } from "./auth";
 import { supabaseAdmin } from "./supabaseAdmin";
 
 const {
   NEXT_PUBLIC_BASE_URL,
   DISCORD_CLIENT_ID,
   DISCORD_CLIENT_SECRET,
-  JWT_SECRET,
   SPWORLDS_ID,
   SPWORLDS_TOKEN,
 } = process.env;
+
+// Гарантируем, что все переменные окружения есть
 if (
   !NEXT_PUBLIC_BASE_URL ||
   !DISCORD_CLIENT_ID ||
   !DISCORD_CLIENT_SECRET ||
-  !JWT_SECRET ||
   !SPWORLDS_ID ||
   !SPWORLDS_TOKEN
 ) {
-  throw new Error("❌ Не заданы все env‑переменные для Discord и SPWorlds");
+  throw new Error("❌ Не заданы все env-переменные для Discord и SPWorlds");
 }
 
-const redirectBase = NEXT_PUBLIC_BASE_URL;
-const discordClientId = DISCORD_CLIENT_ID;
-const discordClientSecret = DISCORD_CLIENT_SECRET;
-const jwtSecret = JWT_SECRET;
+// Теперь TypeScript знает, что ниже значения точно не undefined
+const baseUrl: string = NEXT_PUBLIC_BASE_URL;
+const clientId: string = DISCORD_CLIENT_ID;
+const clientSecret: string = DISCORD_CLIENT_SECRET;
 const spAuthHeader = `Bearer ${Buffer.from(
   `${SPWORLDS_ID}:${SPWORLDS_TOKEN}`,
   "utf8"
 ).toString("base64")}`;
 
 export function getDiscordAuthUrl(): string {
-  const redirectUri = `${redirectBase}/api/auth/discord/callback`;
+  const redirectUri = `${baseUrl}/api/auth/discord/callback`;
   const params = new URLSearchParams({
-    client_id: discordClientId,
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: "code",
     scope: "identify",
@@ -48,11 +48,11 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: discordClientId,
-      client_secret: discordClientSecret,
+      client_id: clientId,
+      client_secret: clientSecret,
       grant_type: "authorization_code",
       code,
-      redirect_uri: `${redirectBase}/api/auth/discord/callback`,
+      redirect_uri: `${baseUrl}/api/auth/discord/callback`,
     }).toString(),
   });
   if (!tokenRes.ok) {
@@ -114,12 +114,8 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     throw new Error("Supabase upsert failed: " + error?.message);
   }
 
-  // 5) Генерация JWT и cookie с SameSite=None
-  const token = jwt.sign(
-    { id: userRecord.id, username: userRecord.username },
-    jwtSecret,
-    { expiresIn: "7d" }
-  );
+  // 5) Генерация JWT и cookie
+  const token = signToken({ id: userRecord.id, username: userRecord.username });
   return serialize("token", token, {
     httpOnly: true,
     secure: true,
