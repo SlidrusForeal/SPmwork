@@ -55,11 +55,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto flex items-center justify-between py-4 px-6">
           <Link
             href="/"
-            className="flex items-center space-x-2 hover:text-primary transition-colors"
+            className="flex items-center space-x-3 hover:text-primary transition-colors"
             onClick={handleNavClick}
           >
-            {/* Новая иконка рядом с названием */}
-            <Image src="/favicon.ico" alt="SPmwork" width={24} height={24} />
+            {/* Увеличенный favicon */}
+            <Image src="/favicon.ico" alt="SPmwork" width={64} height={64} />
             <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               SPmwork
             </span>
