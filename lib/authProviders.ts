@@ -2,43 +2,33 @@
 import { serialize } from "cookie";
 import jwt from "jsonwebtoken";
 import { supabaseAdmin } from "./supabaseAdmin";
+import { sp } from "./spworlds"; // экспортируется как `new SPWorlds({...})`
 
 const {
   NEXT_PUBLIC_BASE_URL,
   DISCORD_CLIENT_ID,
   DISCORD_CLIENT_SECRET,
   JWT_SECRET,
-  SPWORLDS_ID,
-  SPWORLDS_TOKEN,
 } = process.env;
 
 if (
   !NEXT_PUBLIC_BASE_URL ||
   !DISCORD_CLIENT_ID ||
   !DISCORD_CLIENT_SECRET ||
-  !JWT_SECRET ||
-  !SPWORLDS_ID ||
-  !SPWORLDS_TOKEN
+  !JWT_SECRET
 ) {
-  throw new Error("❌ Не заданы необходимые env‑переменные");
+  throw new Error(
+    "❌ НЕЗАДАНЫ переменные окружения: NEXT_PUBLIC_BASE_URL, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET или JWT_SECRET"
+  );
 }
 
-const baseUrl = NEXT_PUBLIC_BASE_URL;
-const discordClientId = DISCORD_CLIENT_ID;
-const discordClientSecret = DISCORD_CLIENT_SECRET;
-const jwtSecret = JWT_SECRET;
-const spAuthHeader = `Bearer ${Buffer.from(
-  `${SPWORLDS_ID}:${SPWORLDS_TOKEN}`,
-  "utf8"
-).toString("base64")}`;
-
 /**
- * Формирует URL для начала OAuth2‑потока через Discord
+ * Генерирует URL для начала OAuth2‑потока через Discord
  */
 export function getDiscordAuthUrl(): string {
-  const redirectUri = `${baseUrl}/api/auth/discord/callback`;
+  const redirectUri = `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`;
   const params = new URLSearchParams();
-  params.set("client_id", discordClientId);
+  params.set("client_id", DISCORD_CLIENT_ID!);
   params.set("redirect_uri", redirectUri);
   params.set("response_type", "code");
   params.set("scope", "identify");
@@ -46,20 +36,20 @@ export function getDiscordAuthUrl(): string {
 }
 
 /**
- * Обрабатывает callback от Discord:
- * 1) code → access_token
- * 2) получение профиля Discord
- * 3) получение данных пользователя из SPWorlds
- * 4) upsert в Supabase
- * 5) генерация JWT + Set-Cookie
+ * Обработка callback от Discord:
+ * 1) Обмен code → access_token
+ * 2) Получение профиля из Discord
+ * 3) Получение профиля из SPWorlds (getCardOwner)
+ * 4) Upsert в Supabase
+ * 5) Генерация JWT + Set-Cookie
  */
 export async function handleDiscordCallback(code: string): Promise<string> {
-  const redirectUri = `${baseUrl}/api/auth/discord/callback`;
+  const redirectUri = `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`;
 
-  // 1) Получаем Discord access_token
+  // 1) Code → access_token
   const tokenParams = new URLSearchParams();
-  tokenParams.set("client_id", discordClientId);
-  tokenParams.set("client_secret", discordClientSecret);
+  tokenParams.set("client_id", DISCORD_CLIENT_ID!);
+  tokenParams.set("client_secret", DISCORD_CLIENT_SECRET!);
   tokenParams.set("grant_type", "authorization_code");
   tokenParams.set("code", code);
   tokenParams.set("redirect_uri", redirectUri);
@@ -71,65 +61,39 @@ export async function handleDiscordCallback(code: string): Promise<string> {
   });
   if (!tokenRes.ok) {
     const body = await tokenRes.text();
-    console.error("[Discord /token] status=", tokenRes.status, "body=", body);
-    throw new Error(`Token exchange failed: ${tokenRes.status}`);
+    console.error("[Discord /token] ", tokenRes.status, body);
+    throw new Error(`Discord token exchange failed: ${tokenRes.status}`);
   }
   const { access_token } = (await tokenRes.json()) as { access_token: string };
 
-  // 2) Получаем профиль Discord
+  // 2) Профиль Discord
   const userRes = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${access_token}` },
   });
   if (!userRes.ok) {
     const body = await userRes.text();
-    console.error(
-      "[Discord /users/@me] status=",
-      userRes.status,
-      "body=",
-      body
-    );
-    throw new Error(`User fetch failed: ${userRes.status}`);
+    console.error("[Discord /users/@me] ", userRes.status, body);
+    throw new Error(`Discord user fetch failed: ${userRes.status}`);
   }
-  const { id: discordId, username: discordUsername } =
-    (await userRes.json()) as {
-      id: string;
-      username: string;
-    };
-
-  // 3) Получаем данные пользователя из SPWorlds
-  // Добавляем User-Agent и trailing slash, без Content-Type
-  const spUrl = `https://spworlds.ru/api/public/users/${discordId}/`;
-  const spRes = await fetch(spUrl, {
-    method: "GET",
-    headers: {
-      Authorization: spAuthHeader,
-      Accept: "application/json",
-      "User-Agent": "Mozilla/5.0 (compatible; SPmwork/1.0)",
-    },
-  });
-  console.log(
-    "[SPWorlds public/users]",
-    spUrl,
-    "status=",
-    spRes.status,
-    "content-type=",
-    spRes.headers.get("content-type")
-  );
-
-  if (spRes.status === 404) {
-    throw new Error("У пользователя нет проходки SPWorlds");
-  }
-  const contentType = spRes.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    throw new Error(`SPWorlds returned non-JSON response: ${contentType}`);
-  }
-  const { uuid, username: spUsername } = (await spRes.json()) as {
-    uuid?: string;
-    username?: string | null;
+  const { username: discordUsername } = (await userRes.json()) as {
+    username: string;
   };
-  if (!uuid || !spUsername) {
-    throw new Error("У пользователя нет действительной карты SPWorlds");
+
+  // 3) Профиль SPWorlds — владелец токена
+  const account = await sp.getCardOwner();
+
+  // В типах может быть не массив, приводим к массиву
+  const cards = Array.isArray((account as any).cards)
+    ? (account as any).cards
+    : [(account as any).cards];
+
+  if (cards.length === 0) {
+    throw new Error("У аккаунта SPWorlds нет привязанных карт");
   }
+  const { id: uuid, name: spUsername } = cards[0] as {
+    id: string;
+    name: string;
+  };
 
   // 4) Upsert пользователя в Supabase
   const { data: userRecord, error } = await supabaseAdmin
@@ -146,15 +110,16 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     )
     .select()
     .single();
+
   if (error || !userRecord) {
-    console.error("[Supabase upsert] error=", error);
+    console.error("[Supabase upsert] ", error);
     throw new Error("Не удалось сохранить пользователя в базе");
   }
 
-  // 5) Генерация JWT и упаковка в cookie
+  // 5) Генерация JWT и упаковка в куку
   const token = jwt.sign(
     { id: userRecord.id, username: userRecord.username },
-    jwtSecret,
+    JWT_SECRET!,
     { expiresIn: "7d" }
   );
   return serialize("token", token, {

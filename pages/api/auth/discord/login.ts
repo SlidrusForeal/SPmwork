@@ -3,6 +3,5 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getDiscordAuthUrl } from "../../../../lib/authProviders";
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Перенаправляем сразу на Discord, чтобы получить code
-  return res.redirect(getDiscordAuthUrl());
+  res.redirect(getDiscordAuthUrl());
 }
