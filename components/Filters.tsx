@@ -2,7 +2,8 @@
 import { FormEvent, useState, useEffect } from "react";
 import debounce from "lodash.debounce";
 
-interface Filters {
+// Параметры фильтров для страницы заказов
+export interface FiltersType {
   q?: string;
   category?: string;
   minBudget?: number;
@@ -13,19 +14,19 @@ interface Filters {
 }
 
 interface FiltersProps {
-  onChange: (filters: Filters) => void;
+  onChange: (filters: FiltersType) => void;
 }
 
 export default function Filters({ onChange }: FiltersProps) {
-  const [q, setQ] = useState("");
-  const [category, setCategory] = useState("");
+  const [q, setQ] = useState<string>("");
+  const [category, setCategory] = useState<string>("");
   const [minBudget, setMinBudget] = useState<number>();
   const [maxBudget, setMaxBudget] = useState<number>();
-  const [status, setStatus] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [status, setStatus] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
 
-  const debounced = debounce((f: Filters) => onChange(f), 300);
+  const debounced = debounce((f: FiltersType) => onChange(f), 300);
 
   useEffect(() => {
     debounced({ q, category, minBudget, maxBudget, status, dateFrom, dateTo });
