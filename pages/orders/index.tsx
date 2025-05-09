@@ -48,10 +48,13 @@ export default function OrdersPage({ orders }: { orders: Order[] }) {
 
 export const getServerSideProps: GetServerSideProps = async ({ req }) => {
   const cookies = parse(req.headers.cookie || "");
-  const token = cookies.token;
+  const token = cookies.token || "";
 
   try {
-    const { id } = jwt.verify(token || "", process.env.JWT_SECRET!) as any;
+    // 1) Валидация JWT
+    const { id } = jwt.verify(token, process.env.JWT_SECRET!) as any;
+
+    // 2) Загрузка списка заказов
     const { data: orders, error } = await supabaseAdmin
       .from("orders")
       .select("*")
@@ -61,11 +64,7 @@ export const getServerSideProps: GetServerSideProps = async ({ req }) => {
     if (error) throw error;
     return { props: { orders } };
   } catch {
-    return {
-      redirect: {
-        destination: "/login",
-        permanent: false,
-      },
-    };
+    // При отсутствии или истечении токена — редирект на логин
+    return { redirect: { destination: "/login", permanent: false } };
   }
 };

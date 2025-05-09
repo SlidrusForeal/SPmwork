@@ -5,12 +5,13 @@ import Layout from "../../components/Layout";
 import { Card, Button, Input, Textarea } from "../../components/ui";
 import { supabase } from "../../lib/supabaseClient";
 
-export default function OrderDetail() {
+export default function OrderDetail({ initialOrder }: { initialOrder: any }) {
   const router = useRouter();
   const { id } = router.query as { id?: string };
   const token = typeof window !== "undefined" && localStorage.getItem("token");
 
-  const [order, setOrder] = useState<any>(null);
+  // 1) Используем предзагруженный initialOrder
+  const [order, setOrder] = useState<any>(initialOrder);
   const [offers, setOffers] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [newOffer, setNewOffer] = useState({
@@ -24,17 +25,14 @@ export default function OrderDetail() {
   useEffect(() => {
     if (!id) return;
     Promise.all([
-      fetch(`/api/orders/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((r) => r.json()),
+      // order уже есть, можно убрать второй fetch
       fetch(`/api/orders/${id}/offers`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((r) => r.json()),
       fetch(`/api/messages?orderId=${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((r) => r.json()),
-    ]).then(([o, of, m]) => {
-      setOrder(o.order);
+    ]).then(([of, m]) => {
       setOffers(of.offers);
       setMessages(m.messages);
     });
@@ -230,3 +228,33 @@ export default function OrderDetail() {
     </Layout>
   );
 }
+
+// SSR-защита и предзагрузка initialOrder
+import { parse } from "cookie";
+import jwt from "jsonwebtoken";
+import type { GetServerSideProps } from "next";
+import { supabaseAdmin } from "../../lib/supabaseAdmin";
+
+export const getServerSideProps: GetServerSideProps = async ({
+  req,
+  params,
+}) => {
+  const cookies = parse(req.headers.cookie || "");
+  const token = cookies.token || "";
+  const orderId = params?.id as string;
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRET!);
+
+    const { data: initialOrder, error } = await supabaseAdmin
+      .from("orders")
+      .select("*")
+      .eq("id", orderId)
+      .single();
+
+    if (error || !initialOrder) throw error || new Error("Order not found");
+    return { props: { initialOrder } };
+  } catch {
+    return { redirect: { destination: "/login", permanent: false } };
+  }
+};
