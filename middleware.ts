@@ -1,4 +1,6 @@
 // middleware.ts
+export const runtime = "nodejs";
+
 import { NextResponse, NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 
@@ -42,6 +44,7 @@ export function middleware(req: NextRequest) {
   // Защита приватных страниц /orders
   if (pathname.startsWith("/orders")) {
     try {
+      // Здесь process.env.JWT_SECRET уже доступен
       jwt.verify(token ?? "", process.env.JWT_SECRET!);
       return NextResponse.next();
     } catch {
