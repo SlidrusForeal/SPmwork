@@ -15,8 +15,8 @@ export default function ErrorPage({ statusCode }: ErrorProps) {
         <p className="text-2xl mt-4">
           {statusCode === 404 ? "Страница не найдена" : "Ошибка сервера"}
         </p>
-        <Link href="/">
-          <a className="mt-6 btn-primary">На главную</a>
+        <Link href="/" className="mt-6 btn-primary">
+          На главную
         </Link>
       </div>
     </Layout>

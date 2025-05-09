@@ -39,10 +39,11 @@ const Home: NextPage<HomeProps> = ({ orders }) => {
           Ресурсы, постройки, скины, арты, мапарты и многое другое — всё в одном
           месте с гарантией эскроу‑платежа.
         </p>
-        <Link href="/orders/create">
-          <a className="inline-block bg-secondary hover:bg-secondary-dark text-white text-lg px-8 py-4 rounded">
-            Создать заказ
-          </a>
+        <Link
+          href="/orders/create"
+          className="inline-block bg-secondary hover:bg-secondary-dark text-white text-lg px-8 py-4 rounded"
+        >
+          Создать заказ
         </Link>
       </section>
 
@@ -50,8 +51,8 @@ const Home: NextPage<HomeProps> = ({ orders }) => {
       <section className="mb-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Свежие заказы</h2>
-          <Link href="/orders">
-            <a className="text-primary hover:underline">Смотреть все</a>
+          <Link href="/orders" className="text-primary hover:underline">
+            Смотреть все
           </Link>
         </div>
 
@@ -71,12 +72,13 @@ const Home: NextPage<HomeProps> = ({ orders }) => {
                   <span>
                     Бюджет: <Currency amount={o.budget} />
                   </span>
-                  <Link href={`/orders/${o.id}`}>
-                    <a>
-                      <Button variant="ghost" className="px-2 py-1 text-sm">
-                        Подробнее
-                      </Button>
-                    </a>
+                  <Link
+                    href={`/orders/${o.id}`}
+                    className="inline-block" // если нужно, чтобы Button оставался интерактивным
+                  >
+                    <Button variant="ghost" className="px-2 py-1 text-sm">
+                      Подробнее
+                    </Button>
                   </Link>
                 </div>
               </Card>

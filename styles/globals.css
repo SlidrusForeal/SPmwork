@@ -1,9 +1,7 @@
-/* styles/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* базовые переопределения */
 @layer base {
   html {
     @apply bg-gray-50 text-gray-800 antialiased font-sans;
@@ -13,25 +11,23 @@
   body {
     @apply bg-transparent;
   }
+  /* Ссылки: курсор-рука, синий текст, подчёркивание по hover */
   a {
-    @apply text-inherit no-underline cursor-default;
-    &:hover {
-      @apply text-inherit no-underline;
-    }
+    @apply cursor-pointer text-blue-600 no-underline;
+  }
+  a:hover {
+    @apply underline text-blue-500;
   }
 }
 
-/* общие компоненты */
 @layer components {
   /* Кнопки */
   .btn {
     @apply inline-block font-medium rounded-none transition-colors;
   }
-
   .btn-primary {
     @apply bg-primary text-white hover:bg-primary-dark;
   }
-
   .btn-secondary {
     @apply bg-secondary text-white hover:bg-secondary-dark;
   }
@@ -52,11 +48,9 @@
   .form-select:disabled {
     @apply bg-gray-100 cursor-not-allowed;
   }
-  /* Некорректное состояние поля */
   .is-invalid {
     @apply border-red-500 focus:ring-red-500;
   }
-  /* Сообщение об ошибке под полем */
   .form-error {
     @apply text-red-600 text-sm mt-1;
   }
@@ -71,12 +65,14 @@
   .notification-error {
     @apply bg-red-100 text-red-800 border border-red-200;
   }
-  /* адаптивная сетка заказов */
+
+  /* Сетка заказов */
   .orders-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1.5rem;
   }
+
   /* Спиннер */
   .spinner {
     @apply animate-spin inline-block w-5 h-5 border-4 border-blue-500 border-t-transparent rounded-full;

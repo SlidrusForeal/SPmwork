@@ -11,8 +11,8 @@ export default function Maintenance() {
           Извините за неудобства — мы сейчас проводим техническое обслуживание.
           Скоро всё заработает!
         </p>
-        <Link href="/">
-          <a className="btn-primary">Вернуться на главную</a>
+        <Link href="/" className="btn-primary">
+          Вернуться на главную
         </Link>
       </div>
     </Layout>
