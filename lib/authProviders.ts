@@ -12,7 +12,6 @@ const {
   SPWORLDS_TOKEN,
 } = process.env;
 
-// Проверяем обязательные переменные окружения
 if (
   !NEXT_PUBLIC_BASE_URL ||
   !DISCORD_CLIENT_ID ||
@@ -21,19 +20,17 @@ if (
   !SPWORLDS_ID ||
   !SPWORLDS_TOKEN
 ) {
-  throw new Error(
-    "❌ Не заданы необходимые env‑переменные (Discord или SPWorlds)"
-  );
+  throw new Error("❌ Не заданы необходимые env‑переменные");
 }
 
 const baseUrl = NEXT_PUBLIC_BASE_URL;
 const discordClientId = DISCORD_CLIENT_ID;
 const discordClientSecret = DISCORD_CLIENT_SECRET;
 const jwtSecret = JWT_SECRET;
-const spKeyBase64 = Buffer.from(
+const spAuthHeader = `Bearer ${Buffer.from(
   `${SPWORLDS_ID}:${SPWORLDS_TOKEN}`,
   "utf8"
-).toString("base64");
+).toString("base64")}`;
 
 /**
  * Формирует URL для начала OAuth2‑потока через Discord
@@ -52,7 +49,7 @@ export function getDiscordAuthUrl(): string {
  * Обрабатывает callback от Discord:
  * 1) code → access_token
  * 2) получение профиля Discord
- * 3) получение данных пользователя из SPWorlds (ручной fetch)
+ * 3) получение данных пользователя из SPWorlds
  * 4) upsert в Supabase
  * 5) генерация JWT + Set-Cookie
  */
@@ -99,15 +96,13 @@ export async function handleDiscordCallback(code: string): Promise<string> {
       username: string;
     };
 
-  // 3) Ручной fetch SPWorlds: добавляем правильный заголовок и User-Agent
+  // 3) Получение данных пользователя из SPWorlds
   const spRes = await fetch(
     `https://spworlds.ru/api/public/users/${discordId}`,
     {
-      method: "GET",
       headers: {
-        Authorization: `Bearer ${spKeyBase64}`,
+        Authorization: spAuthHeader,
         Accept: "application/json",
-        "User-Agent": "SPmwork/1.0 (+https://your-domain.com)",
       },
     }
   );
@@ -123,28 +118,15 @@ export async function handleDiscordCallback(code: string): Promise<string> {
   if (spRes.status === 404) {
     throw new Error("У пользователя нет проходки SPWorlds");
   }
-  if (!spRes.ok) {
-    const body = await spRes.text();
-    console.error(
-      "[SPWorlds public/users] status=",
-      spRes.status,
-      "body=",
-      body
-    );
-    throw new Error(`SPWorlds lookup failed: ${spRes.status}`);
+  const contentType = spRes.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error(`SPWorlds returned non-JSON response: ${contentType}`);
   }
 
-  let spData: { uuid?: string; username?: string | null };
-  try {
-    spData = await spRes.json();
-  } catch (e) {
-    const body = await spRes.text();
-    console.error("[SPWorlds public/users] invalid JSON body:", body);
-    throw new Error("SPWorlds returned non-JSON data");
-  }
-
-  const uuid = spData.uuid;
-  const spUsername = spData.username;
+  const { uuid, username: spUsername } = (await spRes.json()) as {
+    uuid?: string;
+    username?: string | null;
+  };
   if (!uuid || !spUsername) {
     throw new Error("У пользователя нет действительной карты SPWorlds");
   }
