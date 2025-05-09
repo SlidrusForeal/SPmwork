@@ -10,13 +10,24 @@ async function handler(
   const userId = req.user.id;
 
   if (req.method === "GET") {
-    const { data, error } = await supabase
+    const { q, category, minBudget, maxBudget, status, dateFrom, dateTo } =
+      req.query;
+    let builder = supabase
       .from("orders")
       .select("*")
       .or(`status.eq.open,buyer_id.eq.${userId}`)
       .order("created_at", { ascending: false });
-    if (error)
-      return res.status(500).json({ error: "Ошибка получения заказов" });
+
+    if (q) builder = builder.ilike("title", `%${q}%`);
+    if (category) builder = builder.eq("category", category as string);
+    if (minBudget) builder = builder.gte("budget", Number(minBudget));
+    if (maxBudget) builder = builder.lte("budget", Number(maxBudget));
+    if (status) builder = builder.eq("status", status as string);
+    if (dateFrom) builder = builder.gte("created_at", dateFrom as string);
+    if (dateTo) builder = builder.lte("created_at", dateTo as string);
+
+    const { data, error } = await builder;
+    if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json({ orders: data });
   }
 

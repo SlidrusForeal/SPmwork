@@ -88,6 +88,7 @@ export async function handleDiscordCallback(code: string): Promise<string> {
   const token = signToken({
     id: userRecord.id,
     username: userRecord.discord_username,
+    role: userRecord.role, // <— новая строка
   });
   const isProd = NODE_ENV === "production";
   return serialize("token", token, {

@@ -36,15 +36,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     window.location.assign("/api/auth/logout");
+    setMobileOpen(false);
   };
   const handleLogin = () => {
     window.location.assign("/api/auth/discord/login");
+    setMobileOpen(false);
   };
   const toggleTheme = () => {
     const next = !dark;
     setDark(next);
     localStorage.setItem("theme", next ? "dark" : "light");
+    setMobileOpen(false);
   };
+
+  // Закрыть мобильное меню при переходе по ссылке
+  const handleNavClick = () => setMobileOpen(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
@@ -53,13 +59,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <Link
             href="/"
             className="text-2xl font-bold text-blue-600 dark:text-blue-400"
+            onClick={handleNavClick}
           >
             SPmwork
           </Link>
 
           <nav className="hidden md:flex items-center space-x-4">
-            <Link href="/">Главная</Link>
-            <Link href="/orders">Заказы</Link>
+            <Link href="/" onClick={handleNavClick}>
+              Главная
+            </Link>
+            <Link href="/orders" onClick={handleNavClick}>
+              Заказы
+            </Link>
 
             {user ? (
               <div className="flex items-center space-x-3">
@@ -112,11 +123,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {mobileOpen && (
           <div className="md:hidden bg-white dark:bg-gray-800">
             <nav className="flex flex-col p-4 space-y-2">
-              <Link href="/">Главная</Link>
-              <Link href="/orders">Заказы</Link>
+              <Link href="/" onClick={handleNavClick}>
+                Главная
+              </Link>
+              <Link href="/orders" onClick={handleNavClick}>
+                Заказы
+              </Link>
 
               {user ? (
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-col space-y-2">
                   {user.spUsername && (
                     <Image
                       src={`https://minotar.net/avatar/${user.spUsername}/32`}

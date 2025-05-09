@@ -8,6 +8,7 @@ declare module "next" {
       username: string;
       minecraft_username?: string;
       minecraft_uuid?: string;
+      role: string;
     };
   }
 }

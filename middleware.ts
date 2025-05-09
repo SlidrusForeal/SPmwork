@@ -1,6 +1,5 @@
 // middleware.ts
 import { NextResponse, NextRequest } from "next/server";
-import jwt from "jsonwebtoken";
 
 export const config = {
   matcher: [
@@ -31,7 +30,6 @@ function methodAllowed(path: string, method: string) {
 }
 
 export function middleware(req: NextRequest) {
-  const token = req.cookies.get("token")?.value;
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/api/")) {
@@ -42,14 +40,9 @@ export function middleware(req: NextRequest) {
         { status: 405 }
       );
     }
-    // 2) Проверяем JWT
-    try {
-      if (!token) throw new Error("Нет токена");
-      jwt.verify(token, process.env.JWT_SECRET!);
-      return NextResponse.next();
-    } catch {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // 2) Пропускаем проверку JWT в middleware —
+    //    аутентификация теперь в API-хендлерах
+    return NextResponse.next();
   }
 
   // Для всех прочих (страницы, статика) — пропускаем
