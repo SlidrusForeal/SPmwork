@@ -12,11 +12,14 @@ export default authenticated(
     }
 
     try {
-      // Получаем профиль пользователя SPWorlds (включая Minecraft-ник и UUID)
-      const owner = await sp.getCardOwner();
-      // owner.username — ник Minecraft на СП
-      // owner.minecraftUUID — привязанный UUID
-      // owner.status — статус на сайте СП
+      const discordId = req.user.id as string;
+      // Ищем пользователя по его Discord-ID
+      const owner: any = await sp.findUser(discordId);
+      if (!owner) {
+        return res
+          .status(404)
+          .json({ error: "SPWorlds: пользователь не найден" });
+      }
 
       // Сохраняем в Supabase
       const { data, error } = await supabaseAdmin
@@ -24,15 +27,17 @@ export default authenticated(
         .update({
           minecraft_username: owner.username,
           minecraft_uuid: owner.minecraftUUID,
-          sp_status: owner.status || null,
+          sp_status: owner.status ?? null,
         })
-        .eq("id", req.user.id)
+        .eq("id", discordId)
         .select()
         .single();
 
       if (error) {
-        throw error;
+        console.error("Ошибка обновления пользователя SPWorlds:", error);
+        return res.status(500).json({ error: error.message });
       }
+
       return res.status(200).json({ user: data });
     } catch (e: any) {
       console.error("SPWorlds profile error:", e);
