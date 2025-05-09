@@ -4,10 +4,9 @@ import Head from "next/head";
 import Link from "next/link";
 import Layout from "../components/Layout";
 import { Card, Button } from "../components/ui";
-import Image from "next/image";
-import { useState, useEffect } from "react";
 import { ShieldCheck, MessageSquare, DollarSign } from "lucide-react";
 import { supabaseAdmin } from "../lib/supabaseAdmin";
+import { Currency } from "../components/ui/Currency";
 
 interface Order {
   id: string;
@@ -21,23 +20,6 @@ interface HomeProps {
 }
 
 const Home: NextPage<HomeProps> = ({ orders }) => {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains("dark"));
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    setIsDark(document.documentElement.classList.contains("dark"));
-
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <Layout>
       <Head>
@@ -64,32 +46,6 @@ const Home: NextPage<HomeProps> = ({ orders }) => {
         </Link>
       </section>
 
-      {/* Features */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-16">
-        <div className="flex flex-col items-center text-center">
-          <ShieldCheck size={48} className="mb-4 text-primary" />
-          <h3 className="text-xl font-semibold mb-2">Безопасный эскроу</h3>
-          <p className="text-sm text-neutral-600">
-            Деньги хранятся до полного завершения работ — вы платите только за
-            результат.
-          </p>
-        </div>
-        <div className="flex flex-col items-center text-center">
-          <MessageSquare size={48} className="mb-4 text-primary" />
-          <h3 className="text-xl font-semibold mb-2">Встроенный чат</h3>
-          <p className="text-sm text-neutral-600">
-            Общайтесь с исполнителем напрямую, уточняйте детали и сроки.
-          </p>
-        </div>
-        <div className="flex flex-col items-center text-center">
-          <DollarSign size={48} className="mb-4 text-primary" />
-          <h3 className="text-xl font-semibold mb-2">Мгновенные выплаты</h3>
-          <p className="text-sm text-neutral-600">
-            После приёма работы средства сразу перечисляются исполнителю.
-          </p>
-        </div>
-      </section>
-
       {/* Latest orders */}
       <section className="mb-8">
         <div className="flex justify-between items-center mb-6">
@@ -112,17 +68,8 @@ const Home: NextPage<HomeProps> = ({ orders }) => {
                   </p>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="flex items-center">
-                    Бюджет:&nbsp;
-                    <strong className="flex items-center">
-                      {o.budget}&nbsp;
-                      <Image
-                        src={isDark ? "/chernyar.webp" : "/bleiyar.webp"}
-                        alt="AR"
-                        width={20}
-                        height={20}
-                      />
-                    </strong>
+                  <span>
+                    Бюджет: <Currency amount={o.budget} />
                   </span>
                   <Link href={`/orders/${o.id}`}>
                     <a>
@@ -148,8 +95,6 @@ export const getServerSideProps: GetServerSideProps<HomeProps> = async () => {
     .eq("status", "open")
     .order("created_at", { ascending: false })
     .limit(8);
-
-  if (error) console.error("Ошибка при загрузке заказов:", error.message);
 
   return {
     props: {

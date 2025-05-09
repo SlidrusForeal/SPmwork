@@ -1,10 +1,20 @@
+// pages/_app.tsx
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js");
+      Notification.requestPermission();
+    }
+  }, []);
+
   return (
     <AnimatePresence mode="wait">
       <motion.div

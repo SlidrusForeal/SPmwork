@@ -9,13 +9,19 @@ export default authenticated(
     const userId = req.user.id;
 
     if (req.method === "GET") {
+      const page = parseInt((req.query.page as string) || "1", 10);
+      const limit = parseInt((req.query.limit as string) || "10", 10);
+      const from = (page - 1) * limit;
+      const to = page * limit - 1;
+
       const { q, category, minBudget, maxBudget, status, dateFrom, dateTo } =
         req.query;
       let builder = supabase
         .from("orders")
-        .select("*")
+        .select("*", { count: "exact" })
         .or(`status.eq.open,buyer_id.eq.${userId}`)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (q) builder = builder.ilike("title", `%${q}%`);
       if (category) builder = builder.eq("category", category as string);
@@ -25,13 +31,13 @@ export default authenticated(
       if (dateFrom) builder = builder.gte("created_at", dateFrom as string);
       if (dateTo) builder = builder.lte("created_at", dateTo as string);
 
-      const { data, error } = await builder;
+      const { data, error, count } = await builder;
       if (error) {
         console.error("Ошибка получения заказов:", error);
         return res.status(500).json({ error: error.message });
       }
 
-      return res.status(200).json({ orders: data });
+      return res.status(200).json({ orders: data, total: count });
     }
 
     if (req.method === "POST") {

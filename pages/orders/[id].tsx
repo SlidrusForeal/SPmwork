@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import Layout from "../../components/Layout";
 import { Card, Button, Input, Textarea } from "../../components/ui";
 import { supabase } from "../../lib/supabaseClient";
+import { Currency } from "../../components/ui/Currency";
 
 export default function OrderDetail({ initialOrder }: { initialOrder: any }) {
   const router = useRouter();
@@ -135,12 +136,11 @@ export default function OrderDetail({ initialOrder }: { initialOrder: any }) {
 
   return (
     <Layout>
-      {/* Заказ */}
       <Card className="mb-6">
         <h1 className="text-2xl font-bold mb-2">{order.title}</h1>
         <p className="mb-4">{order.description}</p>
         <p>
-          Бюджет: <strong>{order.budget}</strong> · Статус: {order.status}
+          Бюджет: <Currency amount={order.budget} /> · Статус: {order.status}
         </p>
       </Card>
 

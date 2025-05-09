@@ -1,8 +1,9 @@
 // pages/profile.tsx
-import { useState } from "react";
-import useSWR, { type SWRResponse } from "swr";
+import React, { useState } from "react";
+import useSWR from "swr";
+import Skeleton from "react-loading-skeleton";
 import Layout from "../components/Layout";
-import { Input, Button } from "../components/ui";
+import { Card, Button } from "../components/ui";
 import { fetcher } from "../lib/fetcher";
 
 interface User {
@@ -14,21 +15,11 @@ interface User {
 }
 
 export default function Profile() {
-  // Используем приведение типа вместо generic-параметра
-  // Используем приведение к упрощённому типу вместо generic
-  const swr = useSWR("/api/auth/me", fetcher) as {
-    data?: { user: User };
-    error?: any;
-    mutate: () => Promise<any>;
-  };
-  const { data, error, mutate } = swr;
-
-  const [username, setUsername] = useState("");
+  const { data, error, mutate } = useSWR<{ user: User }>(
+    "/api/auth/me",
+    fetcher
+  );
   const [loading, setLoading] = useState(false);
-
-  if (error) return <Layout>Ошибка загрузки профиля</Layout>;
-  if (!data) return <Layout>Загрузка...</Layout>;
-  const user = data.user;
 
   const handleLink = async () => {
     setLoading(true);
@@ -36,7 +27,7 @@ export default function Profile() {
       const res = await fetch("/api/profile/minecraft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}), // no body needed since we fetch from SPWorlds
+        body: JSON.stringify({}),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Ошибка");
@@ -48,33 +39,80 @@ export default function Profile() {
     }
   };
 
+  if (error) {
+    return (
+      <Layout>
+        <Card className="max-w-md mx-auto p-6 text-red-600">
+          Ошибка загрузки профиля
+        </Card>
+      </Layout>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Layout>
+        <Card className="max-w-md mx-auto p-6 space-y-4">
+          <Skeleton height={28} width={150} />
+          <Skeleton height={20} count={2} />
+          <Skeleton height={36} width={140} />
+        </Card>
+      </Layout>
+    );
+  }
+
+  const { user } = data;
+
   return (
     <Layout>
-      <h1 className="text-2xl font-bold mb-4">Профиль</h1>
-      <p>
-        <strong>Discord:</strong> {user.username}
-      </p>
-      <p>
-        <strong>Роль:</strong> {user.role}
-      </p>
+      <Card className="max-w-md mx-auto p-6 space-y-4">
+        <h1 className="text-2xl font-bold">Профиль</h1>
 
-      {user.minecraftUsername ? (
-        <div className="mt-4 space-y-2">
+        <div className="space-y-2">
           <p>
-            <strong>Minecraft Ник:</strong> {user.minecraftUsername}
+            <span className="font-semibold">Discord:</span> {user.username}
           </p>
           <p>
-            <strong>UUID:</strong> {user.minecraftUuid}
+            <span className="font-semibold">Роль:</span> {user.role}
           </p>
         </div>
-      ) : (
-        <div className="mt-4 space-y-2">
-          <p>У вас ещё не привязан Minecraft аккаунт.</p>
-          <Button onClick={handleLink} disabled={loading}>
-            {loading ? "Привязываем..." : "Привязать через SPWorlds"}
-          </Button>
-        </div>
-      )}
+
+        {user.minecraftUsername ? (
+          <div className="space-y-2">
+            <p>
+              <span className="font-semibold">Minecraft Ник:</span>{" "}
+              {user.minecraftUsername}
+            </p>
+            <div className="flex items-center space-x-2">
+              <span className="font-semibold">UUID:</span>
+              <code className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                {user.minecraftUuid}
+              </code>
+              <Button
+                variant="ghost"
+                className="px-2 py-1 text-sm"
+                onClick={() =>
+                  navigator.clipboard.writeText(user.minecraftUuid || "")
+                }
+                aria-label="Скопировать UUID"
+              >
+                Копировать
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p>У вас ещё не привязан Minecraft аккаунт.</p>
+            <Button
+              onClick={handleLink}
+              disabled={loading}
+              aria-label="Привязать Minecraft аккаунт"
+            >
+              {loading ? "Привязываем..." : "Привязать через SPWorlds"}
+            </Button>
+          </div>
+        )}
+      </Card>
     </Layout>
   );
 }

@@ -1,84 +1,142 @@
 // pages/orders/index.tsx
-import { useState } from "react";
-import useSWR from "swr";
+import React, { useRef, useCallback, useState } from "react";
+import useSWRInfinite from "swr/infinite";
 import { useRouter } from "next/router";
+import Skeleton from "react-loading-skeleton";
 import Layout from "../../components/Layout";
 import Filters, { FiltersType } from "../../components/Filters";
 import { Card, Button } from "../../components/ui";
 import { fetcher } from "../../lib/fetcher";
+import { Currency } from "../../components/ui/Currency";
 
-interface Order {
-  id: string;
-  title: string;
-  budget: number;
-  status: string;
-  created_at: string;
-}
+const PAGE_SIZE = 10;
+const getKey = (
+  pageIndex: number,
+  previousPageData: any,
+  filters: FiltersType
+) => {
+  // прекращаем, если данные закончились
+  if (previousPageData && !previousPageData.orders.length) return null;
+
+  const params = new URLSearchParams();
+  params.append("page", (pageIndex + 1).toString());
+  params.append("limit", PAGE_SIZE.toString());
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v !== undefined && v !== "") {
+      params.append(k, String(v));
+    }
+  });
+  return `/api/orders?${params.toString()}`;
+};
 
 export default function OrdersPage() {
   const router = useRouter();
   const [filters, setFilters] = useState<FiltersType>({});
 
-  const swrKey = ["/api/orders", filters] as [string, FiltersType];
-  const { data, error, isValidating } = useSWR(
-    () => swrKey,
-    ([url, f]: [string, FiltersType]) => {
-      const params = new URLSearchParams();
-      Object.entries(f).forEach(([key, value]) => {
-        if (value !== undefined && value !== "") {
-          params.append(key, String(value));
-        }
-      });
-      return fetcher(`${url}?${params.toString()}`);
-    }
+  const { data, error, size, setSize, isValidating } = useSWRInfinite(
+    (index, prev) => getKey(index, prev, filters),
+    fetcher
   );
 
-  const orders: Order[] = data?.orders ?? [];
+  // skeleton при первой загрузке
+  if (!data && isValidating) {
+    return (
+      <Layout>
+        <div className="orders-grid">
+          {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+            <Card key={i} className="p-6">
+              <Skeleton height={24} width="60%" style={{ marginBottom: 12 }} />
+              <Skeleton height={18} width="40%" style={{ marginBottom: 16 }} />
+              <Skeleton height={36} />
+            </Card>
+          ))}
+        </div>
+      </Layout>
+    );
+  }
+
+  const orders = data ? data.flatMap((page) => page.orders) : [];
+  const total = data?.[0]?.total ?? 0;
+  const isReachingEnd = orders.length >= total;
+
+  // для бесконечной прокрутки
+  const observer = useRef<IntersectionObserver>();
+  const lastRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (isValidating) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !isReachingEnd) {
+          setSize(size + 1);
+        }
+      });
+      if (node) observer.current.observe(node);
+    },
+    [isValidating, isReachingEnd, size, setSize]
+  );
 
   return (
     <Layout>
-      <div className="flex justify-between items-center mb-6">
+      <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Заказы</h1>
-        <Button onClick={() => router.push("/orders/create")}>
+        <Button
+          onClick={() => router.push("/orders/create")}
+          aria-label="Создать заказ"
+        >
           Создать заказ
         </Button>
-      </div>
+      </header>
 
       <Filters onChange={setFilters} />
 
-      {isValidating ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="h-40">
-              <div className="animate-pulse h-full bg-gray-200 dark:bg-gray-700" />
-            </Card>
-          ))}
-        </div>
-      ) : orders.length === 0 ? (
+      {orders.length === 0 ? (
         <p>Ничего не найдено</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {orders.map((o) => (
-            <Card key={o.id} className="h-full flex flex-col justify-between">
-              <h2
-                className="text-xl font-semibold mb-2 cursor-pointer"
-                onClick={() => router.push(`/orders/${o.id}`)}
-              >
-                {o.title}
-              </h2>
-              <p className="mb-4">
-                Бюджет: <strong>{o.budget}</strong>
-              </p>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
-                Статус: {o.status}
-              </p>
-              <Button onClick={() => router.push(`/orders/${o.id}`)}>
-                Подробнее
-              </Button>
-            </Card>
-          ))}
-        </div>
+        <section className="orders-grid">
+          {orders.map((order, idx) => {
+            const card = (
+              <Card className="p-6">
+                <h2
+                  className="text-xl font-semibold mb-2 cursor-pointer"
+                  onClick={() => router.push(`/orders/${order.id}`)}
+                >
+                  {order.title}
+                </h2>
+                <p className="mb-4">
+                  Бюджет: <Currency amount={order.budget} />
+                </p>
+                <Button
+                  onClick={() => router.push(`/orders/${order.id}`)}
+                  aria-label={`Подробнее по заказу ${order.id}`}
+                >
+                  Подробнее
+                </Button>
+              </Card>
+            );
+            // обёртка для ref у последнего элемента
+            return idx === orders.length - 1 ? (
+              <div key={order.id} ref={lastRef}>
+                {card}
+              </div>
+            ) : (
+              <div key={order.id}>{card}</div>
+            );
+          })}
+        </section>
       )}
+
+      {isValidating && (
+        <p className="text-center mt-6">Загрузка дополнительных заказов...</p>
+      )}
+
+      {/* кнопка «Наверх» */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        className="fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-primary-dark transition-colors"
+        aria-label="Наверх"
+      >
+        ↑
+      </button>
     </Layout>
   );
 }
