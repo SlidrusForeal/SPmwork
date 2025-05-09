@@ -2,10 +2,10 @@
 import { parse } from "cookie";
 import jwt from "jsonwebtoken";
 import type { GetServerSideProps } from "next";
-import Layout from "../../components/Layout";
-import { Card } from "../../components/ui";
-import { motion } from "framer-motion";
 import Link from "next/link";
+import Layout from "../../components/Layout";
+import { Card, Button } from "../../components/ui";
+import { motion } from "framer-motion";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
 
 type Order = {
@@ -18,7 +18,15 @@ type Order = {
 export default function OrdersPage({ orders }: { orders: Order[] }) {
   return (
     <Layout>
-      <h1 className="text-2xl mb-4">Заказы</h1>
+      {/* Заголовок и кнопка создания заказа */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Заказы</h1>
+        <Link href="/orders/create">
+          <Button>Создать заказ</Button>
+        </Link>
+      </div>
+
+      {/* Сетка карточек заказов */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {orders.map((o) => (
           <motion.div key={o.id} whileHover={{ scale: 1.02 }}>
@@ -51,10 +59,10 @@ export const getServerSideProps: GetServerSideProps = async ({ req }) => {
   const token = cookies.token || "";
 
   try {
-    // 1) Валидация JWT
+    // Проверяем JWT из cookie
     const { id } = jwt.verify(token, process.env.JWT_SECRET!) as any;
 
-    // 2) Загрузка списка заказов
+    // Загружаем заказы: открытые или созданные текущим пользователем
     const { data: orders, error } = await supabaseAdmin
       .from("orders")
       .select("*")
@@ -64,7 +72,12 @@ export const getServerSideProps: GetServerSideProps = async ({ req }) => {
     if (error) throw error;
     return { props: { orders } };
   } catch {
-    // При отсутствии или истечении токена — редирект на логин
-    return { redirect: { destination: "/login", permanent: false } };
+    // При отсутствии или истечении токена — редирект на страницу входа
+    return {
+      redirect: {
+        destination: "/login",
+        permanent: false,
+      },
+    };
   }
 };
