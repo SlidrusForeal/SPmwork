@@ -23,9 +23,12 @@ if (
   throw new Error("❌ Не заданы необходимые env‑переменные");
 }
 
-/**
- * Собирает ссылку для начала OAuth через Discord
- */
+// Собираем ключ в формате base64(id:token)
+const spKey = Buffer.from(`${SPWORLDS_ID}:${SPWORLDS_TOKEN}`).toString(
+  "base64"
+);
+
+/** Ссылка для начала OAuth через Discord */
 export function getDiscordAuthUrl(): string {
   const params = new URLSearchParams({
     client_id: DISCORD_CLIENT_ID!,
@@ -37,15 +40,15 @@ export function getDiscordAuthUrl(): string {
 }
 
 /**
- * Обрабатывает callback от Discord:
- * 1) Получаем access_token
- * 2) Получаем профиль Discord
- * 3) Читаем ник через публичный API SPWorlds
- * 4) Создаём или обновляем пользователя в БД
- * 5) Генерируем JWT и возвращаем его в виде Set-Cookie
+ * Обработка callback от Discord:
+ * 1) code → access_token
+ * 2) получение профиля Discord
+ * 3) запрос ника через SPWorlds
+ * 4) upsert в БД
+ * 5) генерация JWT и Set-Cookie
  */
 export async function handleDiscordCallback(code: string): Promise<string> {
-  // 1) Обмен code → access_token
+  // 1) Обмен code → токен
   const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -64,7 +67,7 @@ export async function handleDiscordCallback(code: string): Promise<string> {
   }
   const { access_token } = JSON.parse(tokenText);
 
-  // 2) Получение профиля Discord
+  // 2) Профиль Discord
   const userRes = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${access_token}` },
   });
@@ -75,36 +78,29 @@ export async function handleDiscordCallback(code: string): Promise<string> {
   }
   const { id: discordId, username } = JSON.parse(userText);
 
-  // 3) Запрос ника через публичный API SPWorlds
-  // Формируем ключ: base64(ID:TOKEN)
-  const key = Buffer.from(`${SPWORLDS_ID}:${SPWORLDS_TOKEN}`).toString(
-    "base64"
-  );
+  // 3) Получение ника из SPWorlds
   const spRes = await fetch(
-    `https://spworlds.ru/api/public/users/${discordId}`,
-    {
-      headers: { Authorization: `Bearer ${key}` },
-    }
+    `https://spworlds.ru/api/public/users/${discordId}`, // правильный endpoint :contentReference[oaicite:1]{index=1}
+    { headers: { Authorization: `Bearer ${spKey}` } }
   );
   const spText = await spRes.text();
   if (!spRes.ok) {
     console.error("SPWorlds user lookup error:", spText);
     throw new Error(`SPWorlds lookup failed: ${spRes.status}`);
   }
-  // В ответе: { "username": "..."} или { "username": null }
   const { username: spUsername } = JSON.parse(spText);
   if (!spUsername) {
-    throw new Error("SPWorlds: у пользователя нет карты");
+    throw new Error("У пользователя нет карты SPWorlds");
   }
 
-  // 4) Upsert пользователя в вашей БД
+  // 4) Upsert в Supabase
   const { data: userRecord, error } = await supabaseAdmin
     .from("users")
     .upsert(
       {
-        id: discordId, // используем discordId как уникальный ключ
-        username: spUsername, // имя из SPWorlds
-        email: `${username}@discord`, // заглушка, если у вас нет email
+        id: discordId,
+        username: spUsername,
+        email: `${username}@discord`,
         role: "user",
         created_at: new Date().toISOString(),
       },
@@ -114,22 +110,20 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     .single();
   if (error) {
     console.error("Supabase upsert error:", error);
-    throw new Error("Не удалось сохранить пользователя в БД");
+    throw new Error("Не удалось сохранить пользователя");
   }
 
-  // 5) Генерация JWT и упаковка в куку
+  // 5) Генерация JWT + кука
   const jwtToken = jwt.sign(
     { id: userRecord.id, username: userRecord.username },
     JWT_SECRET!,
     { expiresIn: "7d" }
   );
-  const cookie = serialize("token", jwtToken, {
+  return serialize("token", jwtToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   });
-
-  return cookie;
 }
