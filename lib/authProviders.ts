@@ -124,6 +124,7 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     httpOnly: true,
     secure: true,
     sameSite: "none",
+    domain: "spmwork.vercel.app",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   });
