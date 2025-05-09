@@ -1,23 +1,29 @@
+// components/Layout.tsx
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
 import { Sun, Moon, Menu, X } from "lucide-react";
 
+interface User {
+  id: string;
+  username: string;
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<{ id: string; username: string } | null>(
-    null
-  );
+  const [user, setUser] = useState<User | null>(null);
   const [dark, setDark] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
-        .then((res) => res.json())
-        .then((data) => setUser(data.user))
-        .catch(() => localStorage.removeItem("token"));
-    }
+    // Получаем профиль пользователя из cookie
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (!res.ok) throw new Error("Нет токена");
+        return res.json();
+      })
+      .then((data) => setUser(data.user))
+      .catch(() => setUser(null));
+
+    // Инициализируем тему из localStorage
     setDark(localStorage.getItem("theme") === "dark");
   }, []);
 
@@ -26,13 +32,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [dark]);
 
   const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-    supabase.auth.signOut();
+    // Удаляем cookie и редиректим
+    window.location.assign("/api/auth/logout");
   };
 
   const handleLogin = () => {
     window.location.assign("/api/auth/discord/login");
+  };
+
+  const toggleTheme = () => {
+    const next = !dark;
+    setDark(next);
+    localStorage.setItem("theme", next ? "dark" : "light");
   };
 
   return (
@@ -69,13 +80,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </button>
             )}
             <button
-              onClick={() => {
-                setDark((d) => {
-                  const next = !d;
-                  localStorage.setItem("theme", next ? "dark" : "light");
-                  return next;
-                });
-              }}
+              onClick={toggleTheme}
               className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               aria-label="Переключить тему"
             >
@@ -100,7 +105,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               ) : (
                 <button onClick={handleLogin}>Войти через Discord</button>
               )}
-              <button onClick={() => setDark((d) => !d)} className="mt-2">
+              <button onClick={toggleTheme} className="mt-2">
                 {dark ? "Светлая тема" : "Тёмная тема"}
               </button>
             </nav>

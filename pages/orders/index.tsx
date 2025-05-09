@@ -1,43 +1,71 @@
 // pages/orders/index.tsx
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { parse } from "cookie";
+import jwt from "jsonwebtoken";
+import type { GetServerSideProps } from "next";
 import Layout from "../../components/Layout";
-import { Card, Button } from "../../components/ui";
+import { Card } from "../../components/ui";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { supabaseAdmin } from "../../lib/supabaseAdmin";
 
-type Order = { id: string; title: string; budget: number; status: string };
+type Order = {
+  id: string;
+  title: string;
+  budget: number;
+  status: string;
+};
 
-export default function OrdersList() {
-  const [orders, setOrders] = useState<Order[]>([]);
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      fetch("/api/orders", { headers: { Authorization: `Bearer ${token}` } })
-        .then((res) => res.json())
-        .then((data) => setOrders(data.orders))
-        .catch(console.error);
-    }
-  }, []);
-
+export default function OrdersPage({ orders }: { orders: Order[] }) {
   return (
     <Layout>
-      <h1 className="text-3xl font-bold mb-6">Заказы</h1>
-      <Link href="/orders/create">
-        <Button variant="secondary">Новый заказ</Button>
-      </Link>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+      <h1 className="text-2xl mb-4">Заказы</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {orders.map((o) => (
-          <Card key={o.id}>
-            <h2 className="text-xl font-semibold mb-2">{o.title}</h2>
-            <p className="mb-4">
-              Бюджет: <strong>{o.budget}</strong>
-            </p>
-            <Link href={`/orders/${o.id}`}>
-              <Button>Подробнее</Button>
-            </Link>
-          </Card>
+          <motion.div key={o.id} whileHover={{ scale: 1.02 }}>
+            <Card className="h-full flex flex-col justify-between">
+              <Link
+                href={`/orders/${o.id}`}
+                className="text-xl font-semibold mb-2"
+              >
+                {o.title}
+              </Link>
+              <p className="mb-4">
+                Бюджет: <strong>{o.budget}</strong>
+              </p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
+                Статус: {o.status}
+              </p>
+              <Link href={`/orders/${o.id}`}>
+                <button className="btn-primary w-full">Подробнее</button>
+              </Link>
+            </Card>
+          </motion.div>
         ))}
       </div>
     </Layout>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async ({ req }) => {
+  const cookies = parse(req.headers.cookie || "");
+  const token = cookies.token;
+
+  try {
+    const { id } = jwt.verify(token || "", process.env.JWT_SECRET!) as any;
+    const { data: orders, error } = await supabaseAdmin
+      .from("orders")
+      .select("*")
+      .or(`status.eq.open,buyer_id.eq.${id}`)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return { props: { orders } };
+  } catch {
+    return {
+      redirect: {
+        destination: "/login",
+        permanent: false,
+      },
+    };
+  }
+};
