@@ -30,8 +30,9 @@ const baseUrl = NEXT_PUBLIC_BASE_URL;
 const discordClientId = DISCORD_CLIENT_ID;
 const discordClientSecret = DISCORD_CLIENT_SECRET;
 const jwtSecret = JWT_SECRET;
-// Согласно документации SPWorlds, для публичных API-запросов используется Basic
-const spAuthHeader = `Basic ${Buffer.from(
+
+// SPWorlds ожидает заголовок Authorization: Bearer <base64(ID:TOKEN)>
+const spAuthHeader = `Bearer ${Buffer.from(
   `${SPWORLDS_ID}:${SPWORLDS_TOKEN}`,
   "utf8"
 ).toString("base64")}`;
@@ -104,11 +105,14 @@ export async function handleDiscordCallback(code: string): Promise<string> {
   const spRes = await fetch(
     `https://spworlds.ru/api/public/users/${discordId}`,
     {
-      headers: { Authorization: spAuthHeader },
+      headers: {
+        Authorization: spAuthHeader,
+        Accept: "application/json",
+      },
     }
   );
 
-  // Логируем Content-Type и URL для диагностики
+  // Логируем диагноз
   console.log(
     "[SPWorlds public/users] GET",
     spRes.url,
