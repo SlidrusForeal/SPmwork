@@ -9,9 +9,10 @@ const {
   DISCORD_CLIENT_SECRET,
   SPWORLDS_ID,
   SPWORLDS_TOKEN,
+  NODE_ENV,
 } = process.env;
 
-// Гарантируем, что все переменные окружения есть
+// Убедимся, что все нужные переменные окружения заданы
 if (
   !NEXT_PUBLIC_BASE_URL ||
   !DISCORD_CLIENT_ID ||
@@ -22,10 +23,9 @@ if (
   throw new Error("❌ Не заданы все env-переменные для Discord и SPWorlds");
 }
 
-// Теперь TypeScript знает, что ниже значения точно не undefined
-const baseUrl: string = NEXT_PUBLIC_BASE_URL;
-const clientId: string = DISCORD_CLIENT_ID;
-const clientSecret: string = DISCORD_CLIENT_SECRET;
+const baseUrl = NEXT_PUBLIC_BASE_URL;
+const clientId = DISCORD_CLIENT_ID;
+const clientSecret = DISCORD_CLIENT_SECRET;
 const spAuthHeader = `Bearer ${Buffer.from(
   `${SPWORLDS_ID}:${SPWORLDS_TOKEN}`,
   "utf8"
@@ -43,7 +43,7 @@ export function getDiscordAuthUrl(): string {
 }
 
 export async function handleDiscordCallback(code: string): Promise<string> {
-  // 1) Discord token
+  // 1) Получаем токен Discord
   const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -61,7 +61,7 @@ export async function handleDiscordCallback(code: string): Promise<string> {
   }
   const { access_token } = (await tokenRes.json()) as { access_token: string };
 
-  // 2) Discord profile
+  // 2) Получаем профиль Discord
   const userRes = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${access_token}` },
   });
@@ -73,7 +73,7 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     username: string;
   };
 
-  // 3) SPWorlds account
+  // 3) Получаем аккаунт SPWorlds
   const accountsRes = await fetch(
     "https://spworlds.ru/api/public/accounts/me",
     {
@@ -95,7 +95,7 @@ export async function handleDiscordCallback(code: string): Promise<string> {
   }
   const { id: uuid, name: spUsername } = account.cards[0];
 
-  // 4) Supabase upsert
+  // 4) Upsert пользователя в Supabase
   const { data: userRecord, error } = await supabaseAdmin
     .from("users")
     .upsert(
@@ -114,14 +114,16 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     throw new Error("Supabase upsert failed: " + error?.message);
   }
 
-  // 5) Генерация JWT и cookie
+  // 5) Генерация JWT и установка cookie
   const token = signToken({ id: userRecord.id, username: userRecord.username });
+  const isProd = NODE_ENV === "production";
+
   return serialize("token", token, {
     httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    domain: "spmwork.vercel.app",
+    secure: isProd, // только по HTTPS в проде
+    sameSite: isProd ? "none" : "lax", // lax в деве, none в проде
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
+    // domain не указываем, чтобы cookie работал на localhost и на прод-домене
   });
 }
