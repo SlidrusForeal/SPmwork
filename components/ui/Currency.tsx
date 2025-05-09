@@ -30,8 +30,8 @@ export function Currency({ amount }: { amount: number | string }) {
       <Image
         src={src}
         alt="AR"
-        width={20}
-        height={20}
+        width={24}
+        height={24}
         loading="lazy"
         priority={false}
       />
