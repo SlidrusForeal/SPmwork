@@ -26,12 +26,12 @@ if (
   );
 }
 
-// Локальные константы уже гарантированно строкового типа
 const baseUrl = NEXT_PUBLIC_BASE_URL;
 const discordClientId = DISCORD_CLIENT_ID;
 const discordClientSecret = DISCORD_CLIENT_SECRET;
 const jwtSecret = JWT_SECRET;
-const spAuthHeader = `Bearer ${Buffer.from(
+// Согласно документации SPWorlds, для публичных API-запросов используется Basic
+const spAuthHeader = `Basic ${Buffer.from(
   `${SPWORLDS_ID}:${SPWORLDS_TOKEN}`,
   "utf8"
 ).toString("base64")}`;
@@ -107,6 +107,17 @@ export async function handleDiscordCallback(code: string): Promise<string> {
       headers: { Authorization: spAuthHeader },
     }
   );
+
+  // Логируем Content-Type и URL для диагностики
+  console.log(
+    "[SPWorlds public/users] GET",
+    spRes.url,
+    "status=",
+    spRes.status,
+    "content-type=",
+    spRes.headers.get("content-type")
+  );
+
   if (spRes.status === 404) {
     throw new Error("У пользователя нет проходки SPWorlds");
   }
