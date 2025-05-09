@@ -1,4 +1,3 @@
-// pages/_app.tsx
 "use client";
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
@@ -7,7 +6,7 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import ErrorBoundary from "../components/ErrorBoundary";
 
-// Новые импорты
+// Новые импорты для сбора метрик
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -47,6 +46,7 @@ export default function App({ Component, pageProps }: AppProps) {
         </motion.div>
       </AnimatePresence>
 
+      {/* Vercel Analytics и Speed Insights */}
       <Analytics />
       <SpeedInsights />
     </ErrorBoundary>
