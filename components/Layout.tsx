@@ -1,4 +1,3 @@
-// components/Layout.tsx
 "use client";
 import Link from "next/link";
 import Image from "next/image";
@@ -7,8 +6,8 @@ import { Sun, Moon, Menu, X } from "lucide-react";
 
 interface User {
   id: string;
-  username: string; // Discord-никнейм
-  spUsername?: string; // Minecraft-никнейм для аватарки
+  username: string;
+  spUsername?: string;
   role: string;
 }
 
@@ -56,10 +55,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto flex items-center justify-between py-4 px-6">
           <Link
             href="/"
-            className="text-2xl font-bold text-blue-600 dark:text-blue-400 hover:text-primary transition-colors"
+            className="flex items-center space-x-2 hover:text-primary transition-colors"
             onClick={handleNavClick}
           >
-            SPmwork
+            {/* Новая иконка рядом с названием */}
+            <Image src="/favicon.ico" alt="SPmwork" width={24} height={24} />
+            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              SPmwork
+            </span>
           </Link>
 
           <nav className="hidden md:flex items-center space-x-6">
