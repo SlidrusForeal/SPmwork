@@ -8,6 +8,7 @@ export default class MyDocument extends Document {
         <Head>
           {/* Favicon */}
           <link rel="icon" href="/favicon.ico" />
+          <link rel="shortcut icon" href="/favicon.ico" />
 
           {/* Скрипт до загрузки React, чтобы избежать «мигания» темы */}
           <script
