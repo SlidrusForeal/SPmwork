@@ -2,13 +2,14 @@
 import { serialize } from "cookie";
 import jwt from "jsonwebtoken";
 import { supabaseAdmin } from "./supabaseAdmin";
-import { sp } from "./spworlds";
 
 const {
   NEXT_PUBLIC_BASE_URL,
   DISCORD_CLIENT_ID,
   DISCORD_CLIENT_SECRET,
   JWT_SECRET,
+  SPWORLDS_ID,
+  SPWORLDS_TOKEN,
 } = process.env;
 
 // Проверяем обязательные переменные окружения
@@ -16,10 +17,12 @@ if (
   !NEXT_PUBLIC_BASE_URL ||
   !DISCORD_CLIENT_ID ||
   !DISCORD_CLIENT_SECRET ||
-  !JWT_SECRET
+  !JWT_SECRET ||
+  !SPWORLDS_ID ||
+  !SPWORLDS_TOKEN
 ) {
   throw new Error(
-    "❌ Не заданы необходимые env‑переменные (Discord или JWT_SECRET)"
+    "❌ Не заданы необходимые env‑переменные (Discord или SPWorlds)"
   );
 }
 
@@ -27,6 +30,10 @@ const baseUrl = NEXT_PUBLIC_BASE_URL;
 const discordClientId = DISCORD_CLIENT_ID;
 const discordClientSecret = DISCORD_CLIENT_SECRET;
 const jwtSecret = JWT_SECRET;
+const spKeyBase64 = Buffer.from(
+  `${SPWORLDS_ID}:${SPWORLDS_TOKEN}`,
+  "utf8"
+).toString("base64");
 
 /**
  * Формирует URL для начала OAuth2‑потока через Discord
@@ -43,16 +50,16 @@ export function getDiscordAuthUrl(): string {
 
 /**
  * Обрабатывает callback от Discord:
- * 1) Code → access_token
- * 2) Получение профиля Discord
- * 3) Получение данных пользователя из SPWorlds через официальную библиотеку
- * 4) Upsert в Supabase
- * 5) Генерация JWT + Set-Cookie
+ * 1) code → access_token
+ * 2) получение профиля Discord
+ * 3) получение данных пользователя из SPWorlds (ручной fetch)
+ * 4) upsert в Supabase
+ * 5) генерация JWT + Set-Cookie
  */
 export async function handleDiscordCallback(code: string): Promise<string> {
   const redirectUri = `${baseUrl}/api/auth/discord/callback`;
 
-  // 1) Обмен code → access_token
+  // 1) Получаем Discord access_token
   const tokenParams = new URLSearchParams();
   tokenParams.set("client_id", discordClientId);
   tokenParams.set("client_secret", discordClientSecret);
@@ -72,7 +79,7 @@ export async function handleDiscordCallback(code: string): Promise<string> {
   }
   const { access_token } = (await tokenRes.json()) as { access_token: string };
 
-  // 2) Получение профиля из Discord
+  // 2) Получаем профиль Discord
   const userRes = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${access_token}` },
   });
@@ -92,20 +99,55 @@ export async function handleDiscordCallback(code: string): Promise<string> {
       username: string;
     };
 
-  // 3) Получение данных пользователя из SPWorlds через официальный клиент
-  let spData;
-  try {
-    spData = await sp.findUser(discordId);
-  } catch (e) {
-    console.error("[SPWorlds findUser] error:", e);
-    throw new Error("Не удалось получить данные пользователя SPWorlds");
+  // 3) Ручной fetch SPWorlds: добавляем правильный заголовок и User-Agent
+  const spRes = await fetch(
+    `https://spworlds.ru/api/public/users/${discordId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${spKeyBase64}`,
+        Accept: "application/json",
+        "User-Agent": "SPmwork/1.0 (+https://your-domain.com)",
+      },
+    }
+  );
+  console.log(
+    "[SPWorlds public/users] GET",
+    spRes.url,
+    "status=",
+    spRes.status,
+    "content-type=",
+    spRes.headers.get("content-type")
+  );
+
+  if (spRes.status === 404) {
+    throw new Error("У пользователя нет проходки SPWorlds");
+  }
+  if (!spRes.ok) {
+    const body = await spRes.text();
+    console.error(
+      "[SPWorlds public/users] status=",
+      spRes.status,
+      "body=",
+      body
+    );
+    throw new Error(`SPWorlds lookup failed: ${spRes.status}`);
   }
 
-  if (!spData?.uuid || !spData.username) {
+  let spData: { uuid?: string; username?: string | null };
+  try {
+    spData = await spRes.json();
+  } catch (e) {
+    const body = await spRes.text();
+    console.error("[SPWorlds public/users] invalid JSON body:", body);
+    throw new Error("SPWorlds returned non-JSON data");
+  }
+
+  const uuid = spData.uuid;
+  const spUsername = spData.username;
+  if (!uuid || !spUsername) {
     throw new Error("У пользователя нет действительной карты SPWorlds");
   }
-
-  const { uuid, username: spUsername } = spData;
 
   // 4) Upsert пользователя в Supabase
   const { data: userRecord, error } = await supabaseAdmin
@@ -123,7 +165,7 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     .select()
     .single();
   if (error || !userRecord) {
-    console.error("[Supabase upsert] error:", error);
+    console.error("[Supabase upsert] error=", error);
     throw new Error("Не удалось сохранить пользователя в базе");
   }
 
@@ -133,7 +175,6 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     jwtSecret,
     { expiresIn: "7d" }
   );
-
   return serialize("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
