@@ -8,9 +8,8 @@ import { supabase } from "../../lib/supabaseClient";
 export default function OrderDetail({ initialOrder }: { initialOrder: any }) {
   const router = useRouter();
   const { id } = router.query as { id?: string };
-  const token = typeof window !== "undefined" && localStorage.getItem("token");
 
-  // 1) Используем предзагруженный initialOrder
+  // Используем предзагруженный initialOrder
   const [order, setOrder] = useState<any>(initialOrder);
   const [offers, setOffers] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
@@ -24,19 +23,24 @@ export default function OrderDetail({ initialOrder }: { initialOrder: any }) {
 
   useEffect(() => {
     if (!id) return;
+    // Извлекаем офферы и сообщения, полагаясь на httpOnly cookie (credentials)
     Promise.all([
-      // order уже есть, можно убрать второй fetch
-      fetch(`/api/orders/${id}/offers`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((r) => r.json()),
-      fetch(`/api/messages?orderId=${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((r) => r.json()),
-    ]).then(([of, m]) => {
-      setOffers(of.offers);
-      setMessages(m.messages);
-    });
+      fetch(`/api/orders/${id}/offers`, { credentials: "same-origin" }).then(
+        (r) => (r.ok ? r.json() : Promise.reject(r))
+      ),
+      fetch(`/api/messages?orderId=${id}`, { credentials: "same-origin" }).then(
+        (r) => (r.ok ? r.json() : Promise.reject(r))
+      ),
+    ])
+      .then(([of, m]) => {
+        setOffers(of.offers);
+        setMessages(m.messages);
+      })
+      .catch((err) => {
+        console.error("Ошибка загрузки офферов или сообщений:", err);
+      });
 
+    // real-time подписка (анонимный ключ обеспечивает авторизацию)
     const channel = supabase
       .channel("public:messages")
       .on(
@@ -74,18 +78,18 @@ export default function OrderDetail({ initialOrder }: { initialOrder: any }) {
               <div>
                 <p className="mb-1">
                   Цена: <strong>{o.price}</strong> · Срок:{" "}
-                  <strong>{o.delivery_time} д.</strong>
+                  <strong>{o.delivery_time} дн.</strong>
                 </p>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400">
                   {o.message}
                 </p>
               </div>
-              {order.buyer_id === o.order_id && order.status === "open" && (
+              {order.buyer_id === o.buyer_id && order.status === "open" && (
                 <Button
                   onClick={async () => {
                     await fetch(`/api/orders/${id}/offers/${o.id}/accept`, {
                       method: "POST",
-                      headers: { Authorization: `Bearer ${token}` },
+                      credentials: "same-origin",
                     });
                     router.replace(router.asPath);
                   }}
@@ -128,10 +132,8 @@ export default function OrderDetail({ initialOrder }: { initialOrder: any }) {
                 onClick={async () => {
                   await fetch(`/api/orders/${id}/offers`, {
                     method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      Authorization: `Bearer ${token}`,
-                    },
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(newOffer),
                   });
                   router.replace(router.asPath);
@@ -168,10 +170,8 @@ export default function OrderDetail({ initialOrder }: { initialOrder: any }) {
                 if (!chatText.trim()) return;
                 await fetch(`/api/messages?orderId=${id}`, {
                   method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
+                  credentials: "same-origin",
+                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ content: chatText }),
                 });
                 setChatText("");
@@ -211,10 +211,8 @@ export default function OrderDetail({ initialOrder }: { initialOrder: any }) {
               onClick={async () => {
                 await fetch("/api/reviews", {
                   method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
+                  credentials: "same-origin",
+                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ orderId: id, ...review }),
                 });
                 router.replace(router.asPath);
@@ -245,14 +243,13 @@ export const getServerSideProps: GetServerSideProps = async ({
 
   try {
     jwt.verify(token, process.env.JWT_SECRET!);
-
     const { data: initialOrder, error } = await supabaseAdmin
       .from("orders")
       .select("*")
       .eq("id", orderId)
       .single();
 
-    if (error || !initialOrder) throw error || new Error("Order not found");
+    if (error || !initialOrder) throw error || new Error("Не найден заказ");
     return { props: { initialOrder } };
   } catch {
     return { redirect: { destination: "/login", permanent: false } };
