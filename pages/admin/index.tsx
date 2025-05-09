@@ -2,7 +2,7 @@
 import { GetServerSideProps } from "next";
 import jwt from "jsonwebtoken";
 import { parse } from "cookie";
-import Layout from "../../../components/Layout";
+import Layout from "../../components/Layout";
 import Link from "next/link";
 
 export default function AdminHome() {

@@ -3,7 +3,7 @@ import { GetServerSideProps } from "next";
 import { useState } from "react";
 import jwt from "jsonwebtoken";
 import { parse } from "cookie";
-import Layout from "../../../components/Layout";
+import Layout from "../../components/Layout";
 
 interface User {
   id: string;
