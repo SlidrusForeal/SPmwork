@@ -1,5 +1,4 @@
 // lib/authProviders.ts
-import { SPWorlds } from "spworlds";
 import { serialize } from "cookie";
 import jwt from "jsonwebtoken";
 import { supabaseAdmin } from "./supabaseAdmin";
@@ -17,25 +16,36 @@ if (
   !NEXT_PUBLIC_BASE_URL ||
   !DISCORD_CLIENT_ID ||
   !DISCORD_CLIENT_SECRET ||
-  !JWT_SECRET
+  !JWT_SECRET ||
+  !SPWORLDS_ID ||
+  !SPWORLDS_TOKEN
 ) {
-  throw new Error("❌ Не заданы env‑переменные для OAuth или JWT_SECRET");
+  throw new Error("❌ Не заданы необходимые env‑переменные");
 }
 
-// 1) Сформировать URL для редиректа на Discord
-export function getDiscordAuthUrl() {
+/**
+ * Собирает ссылку для начала OAuth через Discord
+ */
+export function getDiscordAuthUrl(): string {
   const params = new URLSearchParams({
     client_id: DISCORD_CLIENT_ID!,
-    redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`,
+    redirect_uri: `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`,
     response_type: "code",
     scope: "identify",
   });
   return `https://discord.com/api/oauth2/authorize?${params}`;
 }
 
-// 2) Отработать callback: code → access_token → профиль → карта SPWorlds → JWT+кука
-export async function handleDiscordCallback(code: string) {
-  // 1) обмен code → токен
+/**
+ * Обрабатывает callback от Discord:
+ * 1) Получаем access_token
+ * 2) Получаем профиль Discord
+ * 3) Читаем ник через публичный API SPWorlds
+ * 4) Создаём или обновляем пользователя в БД
+ * 5) Генерируем JWT и возвращаем его в виде Set-Cookie
+ */
+export async function handleDiscordCallback(code: string): Promise<string> {
+  // 1) Обмен code → access_token
   const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -47,74 +57,73 @@ export async function handleDiscordCallback(code: string) {
       redirect_uri: `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`,
     }),
   });
-
-  // Читаем текст вместо .json()
   const tokenText = await tokenRes.text();
-  console.error(">>> Discord /token response status:", tokenRes.status);
-  console.error(">>> Discord /token response body:\n", tokenText);
-
   if (!tokenRes.ok) {
-    // сразу выбрасываем с подробностями
+    console.error("Discord token error:", tokenText);
     throw new Error(`Token exchange failed: ${tokenRes.status}`);
   }
-  let parsed;
-  try {
-    parsed = JSON.parse(tokenText);
-  } catch (e) {
-    console.error("JSON.parse error on tokenText:", e);
-    throw new Error("Failed to parse Discord token JSON");
-  }
-  const { access_token } = parsed;
+  const { access_token } = JSON.parse(tokenText);
 
-  // 2) получение профиля
+  // 2) Получение профиля Discord
   const userRes = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${access_token}` },
   });
   const userText = await userRes.text();
-  console.error(">>> Discord /users/@me response status:", userRes.status);
-  console.error(">>> Discord /users/@me response body:\n", userText);
-
   if (!userRes.ok) {
+    console.error("Discord user error:", userText);
     throw new Error(`User fetch failed: ${userRes.status}`);
   }
-  let userJson;
-  try {
-    userJson = JSON.parse(userText);
-  } catch (e) {
-    console.error("JSON.parse error on userText:", e);
-    throw new Error("Failed to parse Discord user JSON");
-  }
-  const { id: discordId, username } = userJson;
+  const { id: discordId, username } = JSON.parse(userText);
 
-  // найти карту SPWorlds по Discord ID
-  const sp = new SPWorlds({
-    id: process.env.SPWORLDS_ID!,
-    token: process.env.SPWORLDS_TOKEN!,
-  });
-  const userCard = await sp.findUser(discordId);
-  if (!userCard) {
-    throw new Error("Карта SPWorlds не найдена для этого Discord ID");
-  }
-
-  // upsert юзера в БД
-  await supabaseAdmin.from("users").upsert(
-    {
-      id: userCard.uuid,
-      username,
-      email: `${username}@spworlds`,
-      role: "user",
-      created_at: new Date().toISOString(),
-    },
-    { onConflict: "id" }
+  // 3) Запрос ника через публичный API SPWorlds
+  // Формируем ключ: base64(ID:TOKEN)
+  const key = Buffer.from(`${SPWORLDS_ID}:${SPWORLDS_TOKEN}`).toString(
+    "base64"
   );
+  const spRes = await fetch(
+    `https://spworlds.ru/api/public/users/${discordId}`,
+    {
+      headers: { Authorization: `Bearer ${key}` },
+    }
+  );
+  const spText = await spRes.text();
+  if (!spRes.ok) {
+    console.error("SPWorlds user lookup error:", spText);
+    throw new Error(`SPWorlds lookup failed: ${spRes.status}`);
+  }
+  // В ответе: { "username": "..."} или { "username": null }
+  const { username: spUsername } = JSON.parse(spText);
+  if (!spUsername) {
+    throw new Error("SPWorlds: у пользователя нет карты");
+  }
 
-  // сгенерировать JWT
-  const token = jwt.sign({ id: userCard.uuid, username }, JWT_SECRET!, {
-    expiresIn: "7d",
-  });
+  // 4) Upsert пользователя в вашей БД
+  const { data: userRecord, error } = await supabaseAdmin
+    .from("users")
+    .upsert(
+      {
+        id: discordId, // используем discordId как уникальный ключ
+        username: spUsername, // имя из SPWorlds
+        email: `${username}@discord`, // заглушка, если у вас нет email
+        role: "user",
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: "id" }
+    )
+    .select()
+    .single();
+  if (error) {
+    console.error("Supabase upsert error:", error);
+    throw new Error("Не удалось сохранить пользователя в БД");
+  }
 
-  // упаковать куку
-  const cookie = serialize("token", token, {
+  // 5) Генерация JWT и упаковка в куку
+  const jwtToken = jwt.sign(
+    { id: userRecord.id, username: userRecord.username },
+    JWT_SECRET!,
+    { expiresIn: "7d" }
+  );
+  const cookie = serialize("token", jwtToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
