@@ -12,7 +12,7 @@ const {
   NODE_ENV,
 } = process.env;
 
-// Убедимся, что все нужные переменные окружения заданы
+// Проверяем наличие ENV
 if (
   !NEXT_PUBLIC_BASE_URL ||
   !DISCORD_CLIENT_ID ||
@@ -101,7 +101,8 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     .upsert(
       {
         id: uuid,
-        username: spUsername,
+        discord_username: discordUsername, // Discord-никнейм
+        sp_username: spUsername, // Название карты
         email: `${discordUsername}@discord`,
         role: "user",
         created_at: new Date().toISOString(),
@@ -115,15 +116,17 @@ export async function handleDiscordCallback(code: string): Promise<string> {
   }
 
   // 5) Генерация JWT и установка cookie
-  const token = signToken({ id: userRecord.id, username: userRecord.username });
+  const token = signToken({
+    id: userRecord.id,
+    username: userRecord.discord_username,
+  });
   const isProd = NODE_ENV === "production";
 
   return serialize("token", token, {
     httpOnly: true,
-    secure: isProd, // только по HTTPS в проде
-    sameSite: isProd ? "none" : "lax", // lax в деве, none в проде
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
-    // domain не указываем, чтобы cookie работал на localhost и на прод-домене
   });
 }

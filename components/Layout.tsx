@@ -5,7 +5,9 @@ import { Sun, Moon, Menu, X } from "lucide-react";
 
 interface User {
   id: string;
-  username: string;
+  username: string; // Discord-никнейм
+  spUsername?: string; // название карты, если нужно
+  role: string;
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -14,7 +16,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    // Получаем профиль пользователя из cookie
+    // Получаем профиль из cookie
     fetch("/api/auth/me")
       .then((res) => {
         if (!res.ok) throw new Error("Нет токена");
@@ -23,7 +25,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       .then((data) => setUser(data.user))
       .catch(() => setUser(null));
 
-    // Инициализируем тему из localStorage
+    // Тема
     setDark(localStorage.getItem("theme") === "dark");
   }, []);
 
@@ -32,7 +34,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [dark]);
 
   const logout = () => {
-    // Удаляем cookie и редиректим
     window.location.assign("/api/auth/logout");
   };
 
@@ -56,9 +57,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             SPmwork
           </Link>
+
           <nav className="hidden md:flex items-center space-x-4">
             <Link href="/">Главная</Link>
             <Link href="/orders">Заказы</Link>
+
             {user ? (
               <>
                 <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded">
@@ -79,6 +82,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 Войти через Discord
               </button>
             )}
+
             <button
               onClick={toggleTheme}
               className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
@@ -87,6 +91,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {dark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
           </nav>
+
           <button
             className="md:hidden p-2"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -95,16 +100,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
+
         {mobileOpen && (
           <div className="md:hidden bg-white dark:bg-gray-800">
             <nav className="flex flex-col p-4 space-y-2">
               <Link href="/">Главная</Link>
               <Link href="/orders">Заказы</Link>
+
               {user ? (
                 <button onClick={logout}>Выйти</button>
               ) : (
                 <button onClick={handleLogin}>Войти через Discord</button>
               )}
+
               <button onClick={toggleTheme} className="mt-2">
                 {dark ? "Светлая тема" : "Тёмная тема"}
               </button>
