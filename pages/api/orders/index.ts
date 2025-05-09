@@ -9,6 +9,7 @@ export default authenticated(
     const userId = req.user.id;
 
     if (req.method === "GET") {
+      // пагинация
       const page = parseInt((req.query.page as string) || "1", 10);
       const limit = parseInt((req.query.limit as string) || "10", 10);
       const from = (page - 1) * limit;
@@ -16,6 +17,7 @@ export default authenticated(
 
       const { q, category, minBudget, maxBudget, status, dateFrom, dateTo } =
         req.query;
+
       let builder = supabase
         .from("orders")
         .select("*", { count: "exact" })

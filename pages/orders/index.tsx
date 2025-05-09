@@ -10,22 +10,12 @@ import { fetcher } from "../../lib/fetcher";
 import { Currency } from "../../components/ui/Currency";
 
 const PAGE_SIZE = 10;
-const getKey = (
-  pageIndex: number,
-  previousPageData: any,
-  filters: FiltersType
-) => {
-  // прекращаем, если данные закончились
-  if (previousPageData && !previousPageData.orders.length) return null;
-
+const getKey = (pageIndex: number, prev: any, filters: FiltersType) => {
+  if (prev && !prev.orders.length) return null;
   const params = new URLSearchParams();
   params.append("page", (pageIndex + 1).toString());
   params.append("limit", PAGE_SIZE.toString());
-  Object.entries(filters).forEach(([k, v]) => {
-    if (v !== undefined && v !== "") {
-      params.append(k, String(v));
-    }
-  });
+  Object.entries(filters).forEach(([k, v]) => v && params.append(k, String(v)));
   return `/api/orders?${params.toString()}`;
 };
 
@@ -33,13 +23,13 @@ export default function OrdersPage() {
   const router = useRouter();
   const [filters, setFilters] = useState<FiltersType>({});
 
-  const { data, error, size, setSize, isValidating } = useSWRInfinite(
-    (index, prev) => getKey(index, prev, filters),
+  const { data, size, setSize, isValidating } = useSWRInfinite(
+    (i, p) => getKey(i, p, filters),
     fetcher
   );
 
-  // skeleton при первой загрузке
   if (!data && isValidating) {
+    // skeleton при первом рендере
     return (
       <Layout>
         <div className="orders-grid">
@@ -59,12 +49,11 @@ export default function OrdersPage() {
   const total = data?.[0]?.total ?? 0;
   const isReachingEnd = orders.length >= total;
 
-  // для бесконечной прокрутки
   const observer = useRef<IntersectionObserver>();
   const lastRef = useCallback(
     (node: HTMLDivElement | null) => {
       if (isValidating) return;
-      if (observer.current) observer.current.disconnect();
+      observer.current?.disconnect();
       observer.current = new IntersectionObserver((entries) => {
         if (entries[0].isIntersecting && !isReachingEnd) {
           setSize(size + 1);
@@ -113,7 +102,6 @@ export default function OrdersPage() {
                 </Button>
               </Card>
             );
-            // обёртка для ref у последнего элемента
             return idx === orders.length - 1 ? (
               <div key={order.id} ref={lastRef}>
                 {card}
@@ -129,7 +117,6 @@ export default function OrdersPage() {
         <p className="text-center mt-6">Загрузка дополнительных заказов...</p>
       )}
 
-      {/* кнопка «Наверх» */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         className="fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-primary-dark transition-colors"

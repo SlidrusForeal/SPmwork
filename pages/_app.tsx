@@ -9,9 +9,23 @@ export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
   useEffect(() => {
+    // Регистрируем sw.js только если он доступен
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js");
-      Notification.requestPermission();
+      fetch("/sw.js", { method: "HEAD" })
+        .then((res) => {
+          if (res.ok) {
+            navigator.serviceWorker
+              .register("/sw.js")
+              .catch(() => console.warn("SW registration failed"));
+          }
+        })
+        .catch(() => {});
+    }
+    // Запрос уведомлений, только если ранее не запрашивали
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().then((perm) => {
+        console.log("Notification permission:", perm);
+      });
     }
   }, []);
 
