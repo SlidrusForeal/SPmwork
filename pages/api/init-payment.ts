@@ -7,14 +7,17 @@ export default async function handler(
 ) {
   if (req.method !== "POST") return res.status(405).end("Method Not Allowed");
 
-  const { orderId, amount } = req.body as { orderId: string; amount: number };
+  const { orderId, amount } = req.body as {
+    orderId: string;
+    amount: number;
+  };
   const spKey = Buffer.from(
     `${process.env.SPWORLDS_ID}:${process.env.SPWORLDS_TOKEN}`
   ).toString("base64");
 
+  //  POST https://spworlds.ru/api/public/payment :contentReference[oaicite:2]{index=2}
   try {
     const apiRes = await fetch("https://spworlds.ru/api/public/payment", {
-      // правильный endpoint :contentReference[oaicite:2]{index=2}
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -27,13 +30,11 @@ export default async function handler(
         data: orderId,
       }),
     });
-
     const text = await apiRes.text();
     if (!apiRes.ok) {
-      console.error("SPWorlds payment error:", text);
+      console.error("SP initPayment error:", text);
       throw new Error(`Payment init failed: ${apiRes.status}`);
     }
-
     const { url } = JSON.parse(text);
     return res.status(200).json({ url });
   } catch (e: any) {

@@ -13,6 +13,7 @@ export default async function handler(
     ? req.query.code[0]
     : req.query.code;
   if (!code) {
+    // если нет code — начинаем OAuth
     return res.redirect(getDiscordAuthUrl());
   }
   try {
