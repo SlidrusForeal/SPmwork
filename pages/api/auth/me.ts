@@ -7,7 +7,9 @@ async function me(req: NextApiRequest & { user: any }, res: NextApiResponse) {
   const userId = req.user.id;
   const { data, error } = await supabaseAdmin
     .from("users")
-    .select("id, discord_username, sp_username, role, created_at")
+    .select(
+      "id, discord_username, minecraft_username, minecraft_uuid, role, created_at"
+    )
     .eq("id", userId)
     .single();
 
@@ -18,8 +20,9 @@ async function me(req: NextApiRequest & { user: any }, res: NextApiResponse) {
   res.status(200).json({
     user: {
       id: data.id,
-      username: data.discord_username, // возвращаем Discord-ник
-      spUsername: data.sp_username, // при необходимости
+      username: data.discord_username,
+      minecraftUsername: data.minecraft_username,
+      minecraftUuid: data.minecraft_uuid,
       role: data.role,
       created_at: data.created_at,
     },

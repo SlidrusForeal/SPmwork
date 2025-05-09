@@ -7,35 +7,21 @@ const {
   NEXT_PUBLIC_BASE_URL,
   DISCORD_CLIENT_ID,
   DISCORD_CLIENT_SECRET,
-  SPWORLDS_ID,
-  SPWORLDS_TOKEN,
   NODE_ENV,
 } = process.env;
 
-// Проверяем наличие ENV
-if (
-  !NEXT_PUBLIC_BASE_URL ||
-  !DISCORD_CLIENT_ID ||
-  !DISCORD_CLIENT_SECRET ||
-  !SPWORLDS_ID ||
-  !SPWORLDS_TOKEN
-) {
-  throw new Error("❌ Не заданы все env-переменные для Discord и SPWorlds");
+if (!NEXT_PUBLIC_BASE_URL || !DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
+  throw new Error("❌ Не заданы env-переменные для Discord OAuth2");
 }
 
-const baseUrl = NEXT_PUBLIC_BASE_URL;
-const clientId = DISCORD_CLIENT_ID;
-const clientSecret = DISCORD_CLIENT_SECRET;
-const spAuthHeader = `Bearer ${Buffer.from(
-  `${SPWORLDS_ID}:${SPWORLDS_TOKEN}`,
-  "utf8"
-).toString("base64")}`;
+function getRedirectUri() {
+  return `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`;
+}
 
 export function getDiscordAuthUrl(): string {
-  const redirectUri = `${baseUrl}/api/auth/discord/callback`;
   const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
+    client_id: DISCORD_CLIENT_ID!,
+    redirect_uri: getRedirectUri(),
     response_type: "code",
     scope: "identify",
   });
@@ -43,16 +29,16 @@ export function getDiscordAuthUrl(): string {
 }
 
 export async function handleDiscordCallback(code: string): Promise<string> {
-  // 1) Получаем токен Discord
+  // 1) Получаем OAuth-токен Discord
   const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: DISCORD_CLIENT_ID!,
+      client_secret: DISCORD_CLIENT_SECRET!,
       grant_type: "authorization_code",
       code,
-      redirect_uri: `${baseUrl}/api/auth/discord/callback`,
+      redirect_uri: getRedirectUri(),
     }).toString(),
   });
   if (!tokenRes.ok) {
@@ -69,40 +55,23 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     const txt = await userRes.text();
     throw new Error(`Discord user error ${userRes.status}: ${txt}`);
   }
-  const { username: discordUsername } = (await userRes.json()) as {
+  const {
+    id: discordId,
+    username: discordUsername,
+    avatar,
+  } = (await userRes.json()) as {
+    id: string;
     username: string;
+    avatar: string | null;
   };
 
-  // 3) Получаем аккаунт SPWorlds
-  const accountsRes = await fetch(
-    "https://spworlds.ru/api/public/accounts/me",
-    {
-      headers: {
-        Authorization: spAuthHeader,
-        Accept: "application/json",
-      },
-    }
-  );
-  if (!accountsRes.ok) {
-    const txt = await accountsRes.text();
-    throw new Error(`SPWorlds accounts error ${accountsRes.status}: ${txt}`);
-  }
-  const account = (await accountsRes.json()) as {
-    cards?: Array<{ id: string; name: string }>;
-  };
-  if (!account.cards || account.cards.length === 0) {
-    throw new Error("У аккаунта нет карт SPWorlds");
-  }
-  const { id: uuid, name: spUsername } = account.cards[0];
-
-  // 4) Upsert пользователя в Supabase
+  // 3) Upsert пользователя в Supabase (без SPWorlds)
   const { data: userRecord, error } = await supabaseAdmin
     .from("users")
     .upsert(
       {
-        id: uuid,
-        discord_username: discordUsername, // Discord-никнейм
-        sp_username: spUsername, // Название карты
+        id: discordId,
+        discord_username: discordUsername,
         email: `${discordUsername}@discord`,
         role: "user",
         created_at: new Date().toISOString(),
@@ -115,17 +84,16 @@ export async function handleDiscordCallback(code: string): Promise<string> {
     throw new Error("Supabase upsert failed: " + error?.message);
   }
 
-  // 5) Генерация JWT и установка cookie
+  // 4) Генерация JWT и установка cookie
   const token = signToken({
     id: userRecord.id,
     username: userRecord.discord_username,
   });
   const isProd = NODE_ENV === "production";
-
   return serialize("token", token, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "none",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   });

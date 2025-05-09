@@ -6,6 +6,8 @@ declare module "next" {
     user?: {
       id: string;
       username: string;
+      minecraft_username?: string;
+      minecraft_uuid?: string;
     };
   }
 }
