@@ -23,32 +23,18 @@ export default function OrdersPage() {
   const router = useRouter();
   const [filters, setFilters] = useState<FiltersType>({});
 
+  // 1) Основной хук SWR
   const { data, size, setSize, isValidating } = useSWRInfinite(
-    (i, p) => getKey(i, p, filters),
+    (i, prev) => getKey(i, prev, filters),
     fetcher
   );
 
-  if (!data && isValidating) {
-    // skeleton при первом рендере
-    return (
-      <Layout>
-        <div className="orders-grid">
-          {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-            <Card key={i} className="p-6">
-              <Skeleton height={24} width="60%" style={{ marginBottom: 12 }} />
-              <Skeleton height={18} width="40%" style={{ marginBottom: 16 }} />
-              <Skeleton height={36} />
-            </Card>
-          ))}
-        </div>
-      </Layout>
-    );
-  }
-
+  // 2) Вычисляем производные состояния до любых return
   const orders = data ? data.flatMap((page) => page.orders) : [];
   const total = data?.[0]?.total ?? 0;
   const isReachingEnd = orders.length >= total;
 
+  // 3) Объявляем все хуки useRef и useCallback последовательно
   const observer = useRef<IntersectionObserver>();
   const lastRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -63,6 +49,23 @@ export default function OrdersPage() {
     },
     [isValidating, isReachingEnd, size, setSize]
   );
+
+  // 4) Рендерим skeleton, если ещё нет данных и идёт загрузка
+  if (!data && isValidating) {
+    return (
+      <Layout>
+        <div className="orders-grid">
+          {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+            <Card key={i} className="p-6">
+              <Skeleton height={24} width="60%" style={{ marginBottom: 12 }} />
+              <Skeleton height={18} width="40%" style={{ marginBottom: 16 }} />
+              <Skeleton height={36} />
+            </Card>
+          ))}
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -102,6 +105,7 @@ export default function OrdersPage() {
                 </Button>
               </Card>
             );
+            // Присоединяем ref к последнему элементу для бесконечной загрузки
             return idx === orders.length - 1 ? (
               <div key={order.id} ref={lastRef}>
                 {card}
