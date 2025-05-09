@@ -1,4 +1,5 @@
 // components/Layout.tsx
+"use client";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -17,7 +18,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    // Получаем профиль из API
     fetch("/api/auth/me")
       .then((res) => {
         if (!res.ok) throw new Error("Нет токена");
@@ -26,7 +26,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       .then((data) => setUser(data.user))
       .catch(() => setUser(null));
 
-    // Устанавливаем тему
     setDark(localStorage.getItem("theme") === "dark");
   }, []);
 
@@ -49,7 +48,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setMobileOpen(false);
   };
 
-  // Закрыть мобильное меню при переходе по ссылке
   const handleNavClick = () => setMobileOpen(false);
 
   return (

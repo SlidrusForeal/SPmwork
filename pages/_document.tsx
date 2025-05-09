@@ -6,6 +6,9 @@ export default class MyDocument extends Document {
     return (
       <Html lang="ru">
         <Head>
+          {/* Favicon */}
+          <link rel="icon" href="/favicon.ico" />
+
           {/* Скрипт до загрузки React, чтобы избежать «мигания» темы */}
           <script
             dangerouslySetInnerHTML={{
@@ -19,6 +22,7 @@ export default class MyDocument extends Document {
               `,
             }}
           />
+          {/* Остальные теги, например шрифты */}
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link
             rel="preconnect"
@@ -26,7 +30,7 @@ export default class MyDocument extends Document {
             crossOrigin=""
           />
           <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Merriweather:wght@400;700&family=Fira+Code:wght@400;700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
             rel="stylesheet"
           />
         </Head>
