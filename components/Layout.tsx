@@ -1,12 +1,13 @@
 // components/Layout.tsx
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Sun, Moon, Menu, X } from "lucide-react";
 
 interface User {
   id: string;
   username: string; // Discord-никнейм
-  spUsername?: string; // название карты, если нужно
+  spUsername?: string; // Minecraft-никнейм для аватарки
   role: string;
 }
 
@@ -16,7 +17,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    // Получаем профиль из cookie
+    // Получаем профиль из API
     fetch("/api/auth/me")
       .then((res) => {
         if (!res.ok) throw new Error("Нет токена");
@@ -25,7 +26,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       .then((data) => setUser(data.user))
       .catch(() => setUser(null));
 
-    // Тема
+    // Устанавливаем тему
     setDark(localStorage.getItem("theme") === "dark");
   }, []);
 
@@ -36,11 +37,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const logout = () => {
     window.location.assign("/api/auth/logout");
   };
-
   const handleLogin = () => {
     window.location.assign("/api/auth/discord/login");
   };
-
   const toggleTheme = () => {
     const next = !dark;
     setDark(next);
@@ -63,7 +62,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Link href="/orders">Заказы</Link>
 
             {user ? (
-              <>
+              <div className="flex items-center space-x-3">
+                {user.spUsername && (
+                  <Image
+                    src={`https://minotar.net/avatar/${user.spUsername}/32`}
+                    width={32}
+                    height={32}
+                    alt="Голова игрока Minecraft"
+                    className="rounded-full"
+                  />
+                )}
                 <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded">
                   Привет, <strong>{user.username}</strong>
                 </span>
@@ -73,7 +81,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 >
                   Выйти
                 </button>
-              </>
+              </div>
             ) : (
               <button
                 onClick={handleLogin}
@@ -94,7 +102,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           <button
             className="md:hidden p-2"
-            onClick={() => setMobileOpen(!mobileOpen)}
+            onClick={() => setMobileOpen((o) => !o)}
             aria-label="Меню"
           >
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
@@ -108,12 +116,36 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Link href="/orders">Заказы</Link>
 
               {user ? (
-                <button onClick={logout}>Выйти</button>
+                <div className="flex items-center space-x-2">
+                  {user.spUsername && (
+                    <Image
+                      src={`https://minotar.net/avatar/${user.spUsername}/32`}
+                      width={32}
+                      height={32}
+                      alt="Голова игрока Minecraft"
+                      className="rounded-full"
+                    />
+                  )}
+                  <button
+                    onClick={logout}
+                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                  >
+                    Выйти
+                  </button>
+                </div>
               ) : (
-                <button onClick={handleLogin}>Войти через Discord</button>
+                <button
+                  onClick={handleLogin}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Войти через Discord
+                </button>
               )}
 
-              <button onClick={toggleTheme} className="mt-2">
+              <button
+                onClick={toggleTheme}
+                className="mt-2 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded"
+              >
                 {dark ? "Светлая тема" : "Тёмная тема"}
               </button>
             </nav>
