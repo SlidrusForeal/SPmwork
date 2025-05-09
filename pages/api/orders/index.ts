@@ -38,8 +38,10 @@ async function handler(
       .insert([{ buyer_id: userId, title, description, category, budget }])
       .select()
       .single();
-    if (error) return res.status(500).json({ error: "Ошибка создания заказа" });
-    return res.status(201).json({ order: data });
+    if (error) {
+      console.error("Ошибка создания заказа:", error);
+      return res.status(500).json({ error: error.message, details: error });
+    }
   }
 
   res.status(405).end();
