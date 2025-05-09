@@ -96,19 +96,20 @@ export async function handleDiscordCallback(code: string): Promise<string> {
       username: string;
     };
 
-  // 3) Получение данных пользователя из SPWorlds
-  const spRes = await fetch(
-    `https://spworlds.ru/api/public/users/${discordId}`,
-    {
-      headers: {
-        Authorization: spAuthHeader,
-        Accept: "application/json",
-      },
-    }
-  );
+  // 3) Получаем данные пользователя из SPWorlds
+  // Добавляем User-Agent и trailing slash, без Content-Type
+  const spUrl = `https://spworlds.ru/api/public/users/${discordId}/`;
+  const spRes = await fetch(spUrl, {
+    method: "GET",
+    headers: {
+      Authorization: spAuthHeader,
+      Accept: "application/json",
+      "User-Agent": "Mozilla/5.0 (compatible; SPmwork/1.0)",
+    },
+  });
   console.log(
-    "[SPWorlds public/users] GET",
-    spRes.url,
+    "[SPWorlds public/users]",
+    spUrl,
     "status=",
     spRes.status,
     "content-type=",
@@ -122,7 +123,6 @@ export async function handleDiscordCallback(code: string): Promise<string> {
   if (!contentType.includes("application/json")) {
     throw new Error(`SPWorlds returned non-JSON response: ${contentType}`);
   }
-
   const { uuid, username: spUsername } = (await spRes.json()) as {
     uuid?: string;
     username?: string | null;
