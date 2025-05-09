@@ -1,5 +1,10 @@
 // components/ui/Currency.tsx
-// Упрощённый компонент без хуков для SSR-совместимости
+"use client";
+import React from "react";
+
+/**
+ * SSR‑совместимый компонент валюты с CSS-only переключением иконок.
+ */
 export function Currency({ amount }: { amount: number | string }) {
   return (
     <span
@@ -7,14 +12,14 @@ export function Currency({ amount }: { amount: number | string }) {
       aria-label={`Сумма ${amount} AR`}
     >
       {amount}
-      {/* для светлой темы */}
+      {/* Светлая тема */}
       <img
         src="/bleiyar.webp"
         alt="AR"
         className="w-6 h-6 inline dark:hidden ml-1"
         loading="lazy"
       />
-      {/* для тёмной темы */}
+      {/* Тёмная тема */}
       <img
         src="/chernyar.webp"
         alt="AR"

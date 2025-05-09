@@ -1,27 +1,27 @@
 // lib/fetcher.ts
-
 /**
  * Утилита для выполнения fetch-запросов.
- * Бросает ошибку, если статус ответа не в диапазоне 2xx.
+ * Перенаправляет на /login при 401 и бросает ошибку.
  */
 export async function fetcher<T = any>(
   url: string,
   opts: RequestInit = {}
 ): Promise<T> {
   const res = await fetch(url, opts);
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    throw new Error("Unauthorized");
+  }
   let data: any;
   try {
     data = await res.json();
   } catch {
-    // если нет JSON в ответе
-    if (!res.ok) {
-      throw new Error(res.statusText);
-    }
+    if (!res.ok) throw new Error(res.statusText);
     return {} as T;
   }
-
   if (!res.ok) {
-    // стандартная обработка ошибок
     throw new Error(data.error || res.statusText);
   }
   return data as T;
