@@ -1,7 +1,8 @@
 // pages/profile.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import useSWR from "swr";
 import Skeleton from "react-loading-skeleton";
+import Image from "next/image";
 import Layout from "../components/Layout";
 import { Card, Button } from "../components/ui";
 import { fetcher } from "../lib/fetcher";
@@ -20,8 +21,19 @@ export default function Profile() {
     fetcher
   );
   const [loading, setLoading] = useState(false);
+  const [autoLinked, setAutoLinked] = useState(false);
 
-  const handleLink = async () => {
+  // Автоматическая привязка при первом и последующих заходах
+  useEffect(() => {
+    if (!data) return;
+    const user = data.user;
+    if (!user.minecraftUsername && !loading && !autoLinked) {
+      // автоматический handleLink
+      linkMinecraft();
+    }
+  }, [data, loading, autoLinked]);
+
+  const linkMinecraft = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/profile/minecraft", {
@@ -30,12 +42,13 @@ export default function Profile() {
         body: JSON.stringify({}),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Ошибка");
-      mutate();
+      if (!res.ok) throw new Error(json.error || "Ошибка привязки");
+      await mutate();
     } catch (e: any) {
-      alert(e.message);
+      console.error("Auto link error:", e.message);
     } finally {
       setLoading(false);
+      setAutoLinked(true);
     }
   };
 
@@ -66,7 +79,25 @@ export default function Profile() {
   return (
     <Layout>
       <Card className="max-w-md mx-auto p-6 space-y-4">
-        <h1 className="text-2xl font-bold">Профиль</h1>
+        <h1 className="text-2xl font-bold text-center">Профиль</h1>
+
+        {user.minecraftUsername && user.minecraftUuid ? (
+          <div className="flex justify-center">
+            <Image
+              src={`https://crafatar.com/renders/body/${user.minecraftUuid}?size=200&overlay`}
+              width={200}
+              height={200}
+              alt={`${user.minecraftUsername} skin`}
+              className="rounded-lg bg-white"
+            />
+          </div>
+        ) : (
+          <div className="text-center text-neutral-500">
+            {loading
+              ? "Привязываем Minecraft аккаунт..."
+              : "Minecraft аккаунт не привязан"}
+          </div>
+        )}
 
         <div className="space-y-2">
           <p>
@@ -100,18 +131,7 @@ export default function Profile() {
               </Button>
             </div>
           </div>
-        ) : (
-          <div className="space-y-2">
-            <p>У вас ещё не привязан Minecraft аккаунт.</p>
-            <Button
-              onClick={handleLink}
-              disabled={loading}
-              aria-label="Привязать Minecraft аккаунт"
-            >
-              {loading ? "Привязываем..." : "Привязать через SPWorlds"}
-            </Button>
-          </div>
-        )}
+        ) : null}
       </Card>
     </Layout>
   );
