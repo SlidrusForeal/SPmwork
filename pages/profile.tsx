@@ -23,29 +23,23 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [autoLinked, setAutoLinked] = useState(false);
 
-  // Автоматическая привязка при первом и последующих заходах
+  // Автопривязка через SPWorlds
   useEffect(() => {
-    if (!data) return;
-    const user = data.user;
-    if (!user.minecraftUsername && !loading && !autoLinked) {
-      // автоматический handleLink
+    if (!data || autoLinked) return;
+    const { user } = data;
+    if (!user.minecraftUsername) {
       linkMinecraft();
     }
-  }, [data, loading, autoLinked]);
+  }, [data]);
 
   const linkMinecraft = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/profile/minecraft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Ошибка привязки");
+      const res = await fetch("/api/profile/minecraft", { method: "POST" });
+      if (!res.ok) throw new Error("Не удалось привязать Minecraft аккаунт");
       await mutate();
-    } catch (e: any) {
-      console.error("Auto link error:", e.message);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
       setAutoLinked(true);
@@ -61,7 +55,6 @@ export default function Profile() {
       </Layout>
     );
   }
-
   if (!data) {
     return (
       <Layout>
@@ -81,43 +74,47 @@ export default function Profile() {
       <Card className="max-w-md mx-auto p-6 space-y-4">
         <h1 className="text-2xl font-bold text-center">Профиль</h1>
 
-        {user.minecraftUsername && user.minecraftUuid ? (
-          <div className="flex justify-center">
+        {/* Секция Discord и SPWorlds */}
+        <div className="space-y-2 text-center">
+          <p>
+            <span className="font-semibold">Discord:</span> {user.username}
+          </p>
+          {!user.minecraftUsername ? (
+            <Button
+              onClick={linkMinecraft}
+              disabled={loading}
+              className="mt-2"
+              aria-label="Привязать Minecraft аккаунт"
+            >
+              {loading ? "Привязываем..." : "Привязать через SPWorlds"}
+            </Button>
+          ) : (
+            <p className="text-green-600">Minecraft аккаунт привязан</p>
+          )}
+        </div>
+
+        {/* Скин игрока */}
+        {user.minecraftUsername && user.minecraftUuid && (
+          <div className="flex justify-center mt-4">
             <Image
               src={`https://crafatar.com/renders/body/${user.minecraftUuid}?size=200&overlay`}
               width={200}
               height={200}
               alt={`${user.minecraftUsername} skin`}
-              className="rounded-lg bg-white"
+              className="rounded-lg"
             />
-          </div>
-        ) : (
-          <div className="text-center text-neutral-500">
-            {loading
-              ? "Привязываем Minecraft аккаунт..."
-              : "Minecraft аккаунт не привязан"}
           </div>
         )}
 
+        {/* Остальные данные */}
         <div className="space-y-2">
-          <p>
-            <span className="font-semibold">Discord:</span> {user.username}
-          </p>
           <p>
             <span className="font-semibold">Роль:</span> {user.role}
           </p>
-        </div>
-
-        {user.minecraftUsername ? (
-          <div className="space-y-2">
-            <p>
-              <span className="font-semibold">Minecraft Ник:</span>{" "}
-              {user.minecraftUsername}
-            </p>
+          {user.minecraftUsername && (
             <div className="flex items-center space-x-2">
-              <span className="font-semibold">UUID:</span>
               <code className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                {user.minecraftUuid}
+                UUID: {user.minecraftUuid}
               </code>
               <Button
                 variant="ghost"
@@ -130,8 +127,8 @@ export default function Profile() {
                 Копировать
               </Button>
             </div>
-          </div>
-        ) : null}
+          )}
+        </div>
       </Card>
     </Layout>
   );
