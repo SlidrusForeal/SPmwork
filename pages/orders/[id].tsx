@@ -12,6 +12,7 @@ import RatingSummary from "../../components/RatingSummary";
 import useSWR from "swr";
 import { fetcher } from "../../lib/fetcher";
 import { useUser } from "../../lib/useUser";
+import { NextSeo } from "next-seo";
 
 interface Review {
   id: string;
@@ -194,6 +195,24 @@ export default function OrderDetail() {
 
   return (
     <Layout>
+      {order && (
+        <NextSeo
+          title={order.title}
+          description={order.description.slice(0, 160)}
+          openGraph={{
+            url: `https://spmwork.vercel.app/orders/${id}`,
+            title: order.title,
+            description: order.description,
+            images: [
+              {
+                url:
+                  order.imageUrl || "https://spmwork.vercel.app/icon-512.png",
+                alt: order.title,
+              },
+            ],
+          }}
+        />
+      )}
       <div className="max-w-4xl mx-auto space-y-6">
         {!accepted ? (
           <>

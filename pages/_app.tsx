@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { DefaultSeo } from "next-seo";
+import SEO from "../next-seo.config";
 
 // Новые импорты для сбора метрик
 import { Analytics } from "@vercel/analytics/next";
@@ -34,6 +36,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <ErrorBoundary>
+      <DefaultSeo {...SEO} />
       <AnimatePresence mode="wait">
         <motion.div
           key={router.asPath}

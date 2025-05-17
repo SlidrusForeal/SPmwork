@@ -10,9 +10,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div>
         <input
-          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm ${
-            error ? "border-red-300" : ""
-          } ${className}`}
+          className={`
+            mt-1 block w-full rounded-md border-gray-300 shadow-sm \
+            bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 \
+            focus:border-primary focus:ring-primary sm:text-sm \
+            ${error ? "border-red-300" : ""} \
+            ${className}
+          `}
           ref={ref}
           {...props}
         />
