@@ -1,41 +1,124 @@
 // pages/admin/index.tsx
 import { GetServerSideProps } from "next";
-import jwt from "jsonwebtoken";
-import { parse } from "cookie";
+import { useRouter } from "next/router";
 import Layout from "../../components/Layout";
-import Link from "next/link";
+import AdminPanel from "../../components/AdminPanel";
+import { supabaseAdmin } from "../../lib/supabaseAdmin";
+import { useUser } from "../../lib/useUser";
 
-export default function AdminHome() {
+interface AdminPageProps {
+  users: any[];
+  orders: any[];
+  reports: any[];
+}
+
+export default function AdminPage({ users, orders, reports }: AdminPageProps) {
+  const router = useRouter();
+  const { user, loading } = useUser();
+
+  // Проверяем права доступа
+  if (!loading && (!user || !user.is_admin)) {
+    router.push("/");
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
-      <h1 className="text-2xl font-bold mb-4">Админ-панель</h1>
-      <ul className="list-disc ml-6 space-y-2">
-        <li>
-          <Link href="/admin/users">Управление пользователями</Link>
-        </li>
-        <li>
-          <Link href="/admin/orders">Споры по заказам</Link>
-        </li>
-      </ul>
+      <div className="container mx-auto py-8">
+        <AdminPanel users={users} orders={orders} reports={reports} />
+      </div>
     </Layout>
   );
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ req }) => {
-  const cookies = parse(req.headers.cookie || "");
-  try {
-    const user = jwt.verify(
-      cookies.token || "",
-      process.env.JWT_SECRET!
-    ) as any;
-    if (!["moderator", "admin"].includes(user.role)) throw new Error();
-    return { props: {} };
-  } catch {
+  // Проверяем авторизацию на сервере
+  const { user } = await supabaseAdmin.auth.api.getUserByCookie(req);
+  if (!user) {
     return {
       redirect: {
-        destination: `/login?returnTo=${encodeURIComponent("/admin")}`,
+        destination: "/",
         permanent: false,
       },
     };
   }
+
+  // Проверяем права администратора
+  const { data: userData } = await supabaseAdmin
+    .from("users")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (!userData?.is_admin) {
+    return {
+      redirect: {
+        destination: "/",
+        permanent: false,
+      },
+    };
+  }
+
+  // Загружаем данные для админ панели
+  const [{ data: users }, { data: orders }, { data: reports }] =
+    await Promise.all([
+      supabaseAdmin
+        .from("users")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabaseAdmin
+        .from("orders")
+        .select(
+          `
+        *,
+        buyer:users!orders_buyer_id_fkey (
+          username,
+          minecraft_username
+        ),
+        seller:offers!inner (
+          user:users (
+            username,
+            minecraft_username
+          )
+        )
+      `
+        )
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabaseAdmin
+        .from("reports")
+        .select(
+          `
+        *,
+        reporter:users!reports_reporter_id_fkey (
+          username,
+          minecraft_username
+        ),
+        reported:users!reports_reported_id_fkey (
+          username,
+          minecraft_username
+        )
+      `
+        )
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ]);
+
+  return {
+    props: {
+      users: users || [],
+      orders: orders || [],
+      reports: reports || [],
+    },
+  };
 };

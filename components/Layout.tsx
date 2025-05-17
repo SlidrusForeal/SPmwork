@@ -3,6 +3,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Sun, Moon, Menu, X } from "lucide-react";
+import { useRouter } from "next/router";
+import { supabase } from "../lib/supabaseClient";
+import type { User } from "../types";
+import NotificationsPopover from "./NotificationsPopover";
 
 interface User {
   id: string;
@@ -160,29 +164,32 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
               {user ? (
                 <div className="flex flex-col space-y-2">
-                  <Link
-                    href="/profile"
-                    className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
-                    onClick={handleNavClick}
-                  >
-                    {user.minecraftUsername && (
-                      <Image
-                        src={`https://minotar.net/avatar/${user.minecraftUsername}/32`}
-                        width={32}
-                        height={32}
-                        alt="Голова игрока Minecraft"
-                        className="rounded-full"
-                        onError={(e) => {
-                          // Fallback to default Steve head if image fails to load
-                          e.currentTarget.src =
-                            "https://minotar.net/avatar/steve/32";
-                        }}
-                      />
-                    )}
-                    <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                      Привет, <strong>{user.username}</strong>
-                    </span>
-                  </Link>
+                  <div className="flex items-center space-x-4">
+                    <NotificationsPopover />
+                    <Link
+                      href="/profile"
+                      className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+                      onClick={handleNavClick}
+                    >
+                      {user.minecraftUsername && (
+                        <Image
+                          src={`https://minotar.net/avatar/${user.minecraftUsername}/32`}
+                          width={32}
+                          height={32}
+                          alt="Голова игрока Minecraft"
+                          className="rounded-full"
+                          onError={(e) => {
+                            // Fallback to default Steve head if image fails to load
+                            e.currentTarget.src =
+                              "https://minotar.net/avatar/steve/32";
+                          }}
+                        />
+                      )}
+                      <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                        Привет, <strong>{user.username}</strong>
+                      </span>
+                    </Link>
+                  </div>
                   <button
                     onClick={logout}
                     className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
