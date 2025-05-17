@@ -1,7 +1,7 @@
 -- Create payments table
 CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
-    order_id TEXT NOT NULL REFERENCES orders(id),
+    order_id UUID NOT NULL REFERENCES orders(id),
     amount DECIMAL NOT NULL,
     card_number TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed')),

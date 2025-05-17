@@ -3,6 +3,7 @@ import { z } from "zod";
 import { apiHandler } from "../../lib/apiHandler";
 import { sp } from "../../lib/spworlds";
 import { paymentLimiter } from "../../lib/rateLimit";
+import { NextApiRequest, NextApiResponse } from "next";
 
 const InitPaymentSchema = z.object({
   orderId: z.string().min(1),
@@ -16,14 +17,16 @@ if (!process.env.WEBHOOK_BASE_URL) {
 const handler = apiHandler(async (req, res) => {
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
-    return res.status(405).end("Method Not Allowed");
+    res.status(405).end("Method Not Allowed");
+    return;
   }
 
   const parse = InitPaymentSchema.safeParse(req.body);
   if (!parse.success) {
-    return res
+    res
       .status(400)
       .json({ error: "Неверные параметры", details: parse.error.format() });
+    return;
   }
   const { orderId, amount } = parse.data;
 
@@ -41,16 +44,22 @@ const handler = apiHandler(async (req, res) => {
       webhookUrl: `${process.env.WEBHOOK_BASE_URL}/api/webhook`,
       data: orderId,
     });
-    return res.status(200).json({ url });
+    res.status(200).json({ url });
+    return;
   } catch (e: any) {
-    // Если SPWorlds вернул 422 Unprocessable Entity, в e.response есть тело ответа
     console.error("Ошибка SPWorlds initPayment:", e);
     const status = e.statusCode || 500;
     const message = e.message || "Ошибка платёжного API";
-    // попробуем достать детали из тела
     const details = e.response?.body || null;
-    return res.status(status).json({ error: message, details });
+    res.status(status).json({ error: message, details });
+    return;
   }
 });
 
-export default paymentLimiter(handler);
+// Apply rate limiter to the handler
+export default function initPaymentWithRateLimit(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  return paymentLimiter(req, res, handler);
+}

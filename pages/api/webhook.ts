@@ -6,7 +6,7 @@ import { supabaseAdmin } from "../../lib/supabaseAdmin";
 
 // Define the webhook payload schema
 const WebhookPayloadSchema = z.object({
-  data: z.string(),
+  data: z.string().uuid(),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
   card_number: z.string(),
 });

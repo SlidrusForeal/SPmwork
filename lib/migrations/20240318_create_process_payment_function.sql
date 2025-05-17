@@ -1,6 +1,6 @@
 -- Create process_payment function with transaction handling
 CREATE OR REPLACE FUNCTION process_payment(
-    p_order_id TEXT,
+    p_order_id UUID,
     p_amount DECIMAL,
     p_card_number TEXT
 )

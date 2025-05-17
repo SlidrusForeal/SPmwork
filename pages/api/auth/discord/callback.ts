@@ -11,20 +11,29 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log("Discord callback code:", codeParam);
   if (!codeParam) {
     console.error("No code received from Discord");
-    return res.redirect(getDiscordAuthUrl());
+    res.redirect(getDiscordAuthUrl());
+    return;
   }
   try {
     const cookie = await handleDiscordCallback(codeParam);
     // Устанавливаем куку
     res.setHeader("Set-Cookie", [cookie]);
     // И редиректим на /orders
-    return res.redirect("/orders");
+    res.redirect("/orders");
+    return;
   } catch (err: any) {
     console.error("OAuth callback error:", err);
     res
       .status(500)
       .send(`<h1>Ошибка авторизации через Discord</h1><p>${err.message}</p>`);
+    return;
   }
 }
 
-export default authLimiter(handler);
+// Apply rate limiter to the handler
+export default function callbackWithRateLimit(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  return authLimiter(req, res, handler);
+}
