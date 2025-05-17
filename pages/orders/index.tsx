@@ -8,6 +8,7 @@ import Filters, { FiltersType } from "../../components/Filters";
 import { Card, Button } from "../../components/ui";
 import { fetcher } from "../../lib/fetcher";
 import { Currency } from "../../components/ui/Currency";
+import Head from "next/head";
 
 const PAGE_SIZE = 10;
 const getKey = (pageIndex: number, prev: any, filters: FiltersType) => {
@@ -54,6 +55,13 @@ export default function OrdersPage() {
   if (!data && isValidating) {
     return (
       <Layout>
+        <Head>
+          <title>Заказы — SPmwork</title>
+          <meta
+            name="description"
+            content="Просмотр всех активных заказов на SPmwork"
+          />
+        </Head>
         <div
           className="grid gap-6"
           style={{
@@ -74,6 +82,13 @@ export default function OrdersPage() {
 
   return (
     <Layout>
+      <Head>
+        <title>Заказы — SPmwork</title>
+        <meta
+          name="description"
+          content="Просмотр всех активных заказов на SPmwork"
+        />
+      </Head>
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Заказы</h1>
         <Button

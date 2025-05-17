@@ -1,6 +1,7 @@
 // pages/orders/create.tsx
 import { useState } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import Layout from "../../components/Layout";
 import { Input, Textarea, Button } from "../../components/ui";
 
@@ -37,6 +38,13 @@ export default function CreateOrder() {
 
   return (
     <Layout>
+      <Head>
+        <title>Создать заказ — SPmwork</title>
+        <meta
+          name="description"
+          content="Создайте новый заказ на SPmwork — опишите ваши требования и бюджет"
+        />
+      </Head>
       <h1 className="text-3xl font-bold mb-6">Создать заказ</h1>
       <form onSubmit={submit} className="space-y-4 max-w-lg">
         <div>

@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /orders
+Allow: /profile
+Disallow: /admin
+Disallow: /api/
+Disallow: /_next/
+
+Sitemap: https://spmwork.vercel.app/sitemap.xml 

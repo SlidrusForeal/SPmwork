@@ -4,7 +4,7 @@ import Document, { Html, Head, Main, NextScript } from "next/document";
 export default class MyDocument extends Document {
   render() {
     return (
-      <Html lang="ru">
+      <Html lang="ru" className="antialiased">
         <Head>
           {/* Favicon для вкладки браузера */}
           <link rel="icon" href="/favicon.ico" />
@@ -21,6 +21,8 @@ export default class MyDocument extends Document {
                   try {
                     const isDark = localStorage.getItem('theme') === 'dark';
                     document.documentElement.classList.toggle('dark', isDark);
+                    document.documentElement.style.backgroundColor = isDark ? '#111827' : '#ffffff';
+                    document.body.style.backgroundColor = isDark ? '#111827' : '#ffffff';
                   } catch(e) {}
                 })();
               `,
@@ -38,7 +40,7 @@ export default class MyDocument extends Document {
             rel="stylesheet"
           />
         </Head>
-        <body className="font-sans">
+        <body className="bg-white dark:bg-gray-900 transition-colors">
           <Main />
           <NextScript />
         </body>

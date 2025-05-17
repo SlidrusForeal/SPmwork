@@ -1,6 +1,7 @@
 // pages/admin/index.tsx
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import Layout from "../../components/Layout";
 import AdminPanel from "../../components/AdminPanel";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
@@ -70,6 +71,10 @@ export default function AdminPage({ users, orders, reports }: AdminPageProps) {
   if (loading) {
     return (
       <Layout>
+        <Head>
+          <title>Админ-панель — SPmwork</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Head>
         <div className="flex items-center justify-center h-screen">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
         </div>
@@ -79,6 +84,10 @@ export default function AdminPage({ users, orders, reports }: AdminPageProps) {
 
   return (
     <Layout>
+      <Head>
+        <title>Админ-панель — SPmwork</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
       <div className="container mx-auto py-8">
         <AdminPanel users={users} orders={orders} reports={reports} />
       </div>

@@ -33,6 +33,7 @@
         "react-hook-form": "^7.56.3",
         "react-loading-skeleton": "^3.5.0",
         "recharts": "^2.15.3",
+        "sharp": "^0.34.1",
         "spworlds": "^2.1.1",
         "swr": "^2.3.3",
         "tailwind-merge": "^3.3.0",
