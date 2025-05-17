@@ -14,7 +14,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/auth/me")
+    fetch("/api/auth/me", {
+      credentials: "include",
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Нет токена");
         return res.json();
