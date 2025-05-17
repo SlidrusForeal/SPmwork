@@ -1,14 +1,27 @@
 // components/ui/Input.tsx
-import React from "react";
+import { forwardRef } from "react";
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
-
-export default function Input(props: InputProps) {
-  return (
-    <input
-      aria-invalid={props["aria-invalid"]}
-      className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-      {...props}
-    />
-  );
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  error?: string;
 }
+
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ className = "", error, ...props }, ref) => {
+    return (
+      <div>
+        <input
+          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm ${
+            error ? "border-red-300" : ""
+          } ${className}`}
+          ref={ref}
+          {...props}
+        />
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      </div>
+    );
+  }
+);
+
+Input.displayName = "Input";
+
+export default Input;
