@@ -60,13 +60,15 @@ export default authenticated(
           throw new Error("Category is required");
         }
 
-        // Check user's active orders count using raw SQL to handle enum type
+        // Check user's active orders count using raw SQL with proper enum casting
         const { count: activeOrders, error: countError } = await supabase
           .from("orders")
           .select("*", { count: "exact" })
           .eq("buyer_id", userId)
-          .or(
-            "status.eq.open::order_status_enum,status.eq.in_progress::order_status_enum"
+          .filter(
+            "status",
+            "in",
+            `('open'::order_status_enum, 'in_progress'::order_status_enum)`
           );
 
         if (countError) {
@@ -80,7 +82,7 @@ export default authenticated(
           });
         }
 
-        // Create the order
+        // Create the order with proper enum casting
         const { data, error } = await supabaseAdmin
           .from("orders")
           .insert([
