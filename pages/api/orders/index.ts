@@ -60,14 +60,17 @@ export default authenticated(
           throw new Error("Category is required");
         }
 
-        // Check user's active orders count
+        // Check user's active orders count using raw SQL to handle enum type
         const { count: activeOrders, error: countError } = await supabase
           .from("orders")
           .select("*", { count: "exact" })
           .eq("buyer_id", userId)
-          .in("status", ["open", "in_progress"]);
+          .or(
+            "status.eq.open::order_status_enum,status.eq.in_progress::order_status_enum"
+          );
 
         if (countError) {
+          console.error("Error checking active orders:", countError);
           throw new Error("Failed to check active orders");
         }
 
