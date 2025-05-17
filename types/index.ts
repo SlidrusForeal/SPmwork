@@ -15,12 +15,14 @@ export interface User {
   messages?: number;
 }
 
+export type OrderStatus = "open" | "in_progress" | "completed" | "dispute";
+
 export interface Order {
   id: string;
   title: string;
   description: string;
   price: number;
-  status: "open" | "in_progress" | "completed" | "dispute";
+  status: OrderStatus;
   buyer_id: string;
   created_at: string;
   updated_at: string;

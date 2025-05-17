@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import useSWR from "swr";
 import Skeleton from "react-loading-skeleton";
 import Image from "next/image";
+import Head from "next/head";
 import Layout from "../components/Layout";
 import { Card, Button } from "../components/ui";
 import { fetcher } from "../lib/fetcher";
@@ -90,6 +91,9 @@ export default function Profile() {
   if (error) {
     return (
       <Layout>
+        <Head>
+          <title>Профиль — SPmwork</title>
+        </Head>
         <Card className="max-w-4xl mx-auto p-6 text-red-600">
           Ошибка загрузки профиля
         </Card>
@@ -100,6 +104,9 @@ export default function Profile() {
   if (!data) {
     return (
       <Layout>
+        <Head>
+          <title>Профиль — SPmwork</title>
+        </Head>
         <Card className="max-w-4xl mx-auto p-6 space-y-4">
           <Skeleton height={28} width={150} />
           <Skeleton height={20} count={2} />
@@ -114,6 +121,15 @@ export default function Profile() {
 
   return (
     <Layout>
+      <Head>
+        <title>
+          {user.username ? `${user.username} — SPmwork` : "Профиль — SPmwork"}
+        </title>
+        <meta
+          name="description"
+          content={`Профиль пользователя ${user.username || ""} на SPmwork`}
+        />
+      </Head>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Основная информация */}
         <Card className="p-6">
