@@ -8,7 +8,7 @@ out/
 # Локальные переменные окружения
 .env.local
 .env.*.local
-
+tsconfig.tsbuildinfo
 # Логи
 npm-debug.log*
 yarn-debug.log*
