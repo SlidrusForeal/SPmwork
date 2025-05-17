@@ -14,37 +14,38 @@ export default authenticated(
     const userId = req.user.id;
 
     if (req.method === "GET") {
-      // пагинация
-      const page = parseInt((req.query.page as string) || "1", 10);
-      const limit = parseInt((req.query.limit as string) || "10", 10);
-      const from = (page - 1) * limit;
-      const to = page * limit - 1;
+      try {
+        // First get the proper UUID for the user
+        const { data: userOrders, error: userOrdersError } = await supabase.rpc(
+          "get_user_orders",
+          {
+            p_user_id: userId,
+            p_page: parseInt((req.query.page as string) || "1", 10),
+            p_limit: parseInt((req.query.limit as string) || "10", 10),
+            p_category: req.query.category as string | null,
+            p_min_budget: req.query.minBudget
+              ? Number(req.query.minBudget)
+              : null,
+            p_max_budget: req.query.maxBudget
+              ? Number(req.query.maxBudget)
+              : null,
+            p_status: req.query.status as string | null,
+            p_date_from: req.query.dateFrom as string | null,
+            p_date_to: req.query.dateTo as string | null,
+            p_search: req.query.q as string | null,
+          }
+        );
 
-      const { q, category, minBudget, maxBudget, status, dateFrom, dateTo } =
-        req.query;
+        if (userOrdersError) {
+          console.error("Ошибка получения заказов:", userOrdersError);
+          return res.status(500).json({ error: userOrdersError.message });
+        }
 
-      let builder = supabase
-        .from("orders")
-        .select("*", { count: "exact" })
-        .or(`status.eq.open,buyer_id.eq.${userId}`)
-        .order("created_at", { ascending: false })
-        .range(from, to);
-
-      if (q) builder = builder.ilike("title", `%${q}%`);
-      if (category) builder = builder.eq("category", category as string);
-      if (minBudget) builder = builder.gte("budget", Number(minBudget));
-      if (maxBudget) builder = builder.lte("budget", Number(maxBudget));
-      if (status) builder = builder.eq("status", status as string);
-      if (dateFrom) builder = builder.gte("created_at", dateFrom as string);
-      if (dateTo) builder = builder.lte("created_at", dateTo as string);
-
-      const { data, error, count } = await builder;
-      if (error) {
-        console.error("Ошибка получения заказов:", error);
-        return res.status(500).json({ error: error.message });
+        return res.status(200).json(userOrders);
+      } catch (e: any) {
+        console.error("Ошибка получения заказов:", e);
+        return res.status(500).json({ error: e.message });
       }
-
-      return res.status(200).json({ orders: data, total: count });
     }
 
     if (req.method === "POST") {
