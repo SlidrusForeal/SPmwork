@@ -29,20 +29,44 @@ module.exports = {
         lg:   '1.125rem', // 18px
         xl:   '1.25rem',  // 20px
       },
-      // Ваши существующие цвета
+      // Цветовая схема
       colors: {
-        primary:   { light: '#4f8df7', DEFAULT: '#1e6edc', dark: '#155aba' },
-        secondary: { light: '#f7c14f', DEFAULT: '#dc9e1e', dark: '#ba7c15' },
-        accent:    '#f05d5e',
-        neutral: {
-          100: '#f5f5f5', 200: '#eeeeee', 300: '#e0e0e0', 400: '#bdbdbd',
-          500: '#9e9e9e', 600: '#757575', 700: '#616161', 800: '#424242', 900: '#212121'
+        primary: {
+          light: '#4f8df7',
+          DEFAULT: '#1e6edc',
+          dark: '#155aba',
+          foreground: '#ffffff'
         },
+        secondary: {
+          light: '#f7c14f',
+          DEFAULT: '#dc9e1e',
+          dark: '#ba7c15',
+          foreground: '#ffffff'
+        },
+        accent: {
+          DEFAULT: '#f05d5e',
+          foreground: '#ffffff'
+        },
+        neutral: {
+          100: '#f5f5f5',
+          200: '#eeeeee',
+          300: '#e0e0e0',
+          400: '#bdbdbd',
+          500: '#9e9e9e',
+          600: '#757575',
+          700: '#616161',
+          800: '#424242',
+          900: '#212121'
+        },
+        background: {
+          light: '#ffffff',
+          dark: '#111827'
+        }
       },
       fontFamily: {
-        sans:  ['Inter', 'ui-sans-serif', 'system-ui'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
         serif: ['Merriweather', 'ui-serif', 'Georgia'],
-        mono:  ['Fira Code', 'ui-monospace', 'SFMono-Regular'],
+        mono: ['Fira Code', 'ui-monospace', 'SFMono-Regular'],
       },
       borderRadius: {
         lg: '1rem',
@@ -50,6 +74,15 @@ module.exports = {
       },
       transitionDuration: {
         DEFAULT: '200ms'
+      },
+      animation: {
+        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      keyframes: {
+        pulse: {
+          '0%, 100%': { opacity: 1 },
+          '50%': { opacity: .5 },
+        },
       },
     },
   },

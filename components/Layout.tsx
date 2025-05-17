@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import { supabase } from "../lib/supabaseClient";
 import type { User } from "../types";
 import NotificationsPopover from "./NotificationsPopover";
+import PwaPrompt from "./PwaPrompt";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -29,6 +30,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.style.backgroundColor = dark
+      ? "#111827"
+      : "#ffffff";
+    document.body.style.backgroundColor = dark ? "#111827" : "#ffffff";
   }, [dark]);
 
   const logout = () => {
@@ -218,6 +223,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           © {new Date().getFullYear()} SPmwork. Все права защищены.
         </div>
       </footer>
+
+      <PwaPrompt />
     </div>
   );
 }
