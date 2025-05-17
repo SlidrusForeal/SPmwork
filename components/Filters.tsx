@@ -85,20 +85,28 @@ export default function Filters({ onChange }: FiltersProps) {
           type="number"
           placeholder="Мин. бюджет"
           value={minBudget ?? ""}
-          onChange={(e) =>
-            setMinBudget(e.target.value ? +e.target.value : undefined)
-          }
-          className="form-input w-28"
+          onChange={(e) => {
+            const value = e.target.value ? +e.target.value : undefined;
+            if (value === undefined || value >= 0) {
+              setMinBudget(value);
+            }
+          }}
+          min="0"
+          className="form-input w-36"
           aria-label="Минимальный бюджет"
         />
         <input
           type="number"
           placeholder="Макс. бюджет"
           value={maxBudget ?? ""}
-          onChange={(e) =>
-            setMaxBudget(e.target.value ? +e.target.value : undefined)
-          }
-          className="form-input w-28"
+          onChange={(e) => {
+            const value = e.target.value ? +e.target.value : undefined;
+            if (value === undefined || value >= 0) {
+              setMaxBudget(value);
+            }
+          }}
+          min="0"
+          className="form-input w-36"
           aria-label="Максимальный бюджет"
         />
         <select

@@ -73,16 +73,17 @@ export default function Profile() {
   };
 
   const getSkinUrl = () => {
-    if (!data?.user.minecraftUuid) return "";
+    if (!data?.user.minecraftUuid)
+      return "https://crafatar.com/renders/body/steve?size=300&overlay";
     switch (skinView) {
       case "front":
-        return `https://crafatar.com/renders/body/${data.user.minecraftUuid}?size=300&overlay`;
+        return `https://crafatar.com/renders/body/${data.user.minecraftUuid}?size=300&overlay&default=MHF_Steve`;
       case "back":
         return `https://crafatar.com/renders/body/${data.user.minecraftUuid}?size=300&overlay&default=MHF_Steve&rotation=180`;
       case "full":
-        return `https://crafatar.com/skins/${data.user.minecraftUuid}`;
+        return `https://crafatar.com/skins/${data.user.minecraftUuid}?default=MHF_Steve`;
       default:
-        return `https://crafatar.com/renders/body/${data.user.minecraftUuid}?size=300&overlay`;
+        return `https://crafatar.com/renders/body/${data.user.minecraftUuid}?size=300&overlay&default=MHF_Steve`;
     }
   };
 
@@ -127,6 +128,15 @@ export default function Profile() {
                       alt={`${user.minecraftUsername} skin`}
                       fill
                       className="object-contain"
+                      onError={(e) => {
+                        // If the skin fails to load, try using Minotar as fallback
+                        const username = user.minecraftUsername || "steve";
+                        if (skinView === "full") {
+                          e.currentTarget.src = `https://minotar.net/skin/${username}`;
+                        } else {
+                          e.currentTarget.src = `https://minotar.net/body/${username}/300`;
+                        }
+                      }}
                     />
                     <div className="absolute bottom-0 left-0 right-0 flex justify-center p-2 bg-black/50">
                       <div className="flex gap-2">

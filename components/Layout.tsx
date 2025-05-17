@@ -7,7 +7,8 @@ import { Sun, Moon, Menu, X } from "lucide-react";
 interface User {
   id: string;
   username: string;
-  spUsername?: string;
+  minecraftUsername?: string;
+  minecraftUuid?: string;
   role: string;
 }
 
@@ -87,13 +88,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   href="/profile"
                   className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
                 >
-                  {user.spUsername && (
+                  {user.minecraftUsername && (
                     <Image
-                      src={`https://minotar.net/avatar/${user.spUsername}/32`}
+                      src={`https://minotar.net/avatar/${user.minecraftUsername}/32`}
                       width={32}
                       height={32}
                       alt="Голова игрока Minecraft"
                       className="rounded-full"
+                      onError={(e) => {
+                        // Fallback to default Steve head if image fails to load
+                        e.currentTarget.src =
+                          "https://minotar.net/avatar/steve/32";
+                      }}
                     />
                   )}
                   <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
@@ -159,13 +165,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
                     onClick={handleNavClick}
                   >
-                    {user.spUsername && (
+                    {user.minecraftUsername && (
                       <Image
-                        src={`https://minotar.net/avatar/${user.spUsername}/32`}
+                        src={`https://minotar.net/avatar/${user.minecraftUsername}/32`}
                         width={32}
                         height={32}
                         alt="Голова игрока Minecraft"
                         className="rounded-full"
+                        onError={(e) => {
+                          // Fallback to default Steve head if image fails to load
+                          e.currentTarget.src =
+                            "https://minotar.net/avatar/steve/32";
+                        }}
                       />
                     )}
                     <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">

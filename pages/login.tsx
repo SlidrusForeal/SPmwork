@@ -3,8 +3,15 @@ import Layout from "../components/Layout";
 import Link from "next/link";
 import { Button } from "../components/ui";
 import { LogIn } from "lucide-react";
+import { useRouter } from "next/router";
 
 export default function Login() {
+  const router = useRouter();
+  const returnTo = (router.query.returnTo as string) || "/orders";
+  const loginUrl = `/api/auth/discord/login?returnTo=${encodeURIComponent(
+    returnTo
+  )}`;
+
   return (
     <Layout>
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4">
@@ -17,7 +24,7 @@ export default function Login() {
             Используйте свою учётную запись Discord для доступа к админ‑панели и
             заказам
           </p>
-          <Link href="/api/auth/discord/login" className="w-full inline-block">
+          <Link href={loginUrl} className="w-full inline-block">
             <Button
               variant="primary"
               className="flex items-center justify-center w-full space-x-2"

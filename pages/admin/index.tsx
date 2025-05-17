@@ -31,6 +31,11 @@ export const getServerSideProps: GetServerSideProps = async ({ req }) => {
     if (!["moderator", "admin"].includes(user.role)) throw new Error();
     return { props: {} };
   } catch {
-    return { redirect: { destination: "/login", permanent: false } };
+    return {
+      redirect: {
+        destination: `/login?returnTo=${encodeURIComponent("/admin")}`,
+        permanent: false,
+      },
+    };
   }
 };

@@ -18,13 +18,18 @@ function getRedirectUri() {
   return `${NEXT_PUBLIC_BASE_URL}/api/auth/discord/callback`;
 }
 
-export function getDiscordAuthUrl(): string {
+export function getDiscordAuthUrl(state?: string): string {
   const params = new URLSearchParams({
     client_id: DISCORD_CLIENT_ID!,
     redirect_uri: getRedirectUri(),
     response_type: "code",
     scope: "identify",
   });
+
+  if (state) {
+    params.append("state", state);
+  }
+
   return `https://discord.com/api/oauth2/authorize?${params.toString()}`;
 }
 
