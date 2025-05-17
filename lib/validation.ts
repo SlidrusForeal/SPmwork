@@ -7,6 +7,16 @@ const validOrderStatuses: OrderStatus[] = [
   "dispute",
 ];
 
+export const validOrderCategories = [
+  "development",
+  "design",
+  "writing",
+  "marketing",
+  "other",
+] as const;
+
+export type OrderCategory = (typeof validOrderCategories)[number];
+
 export function isValidOrderStatus(status: any): status is OrderStatus {
   return (
     typeof status === "string" &&
@@ -23,6 +33,24 @@ export function validateOrderStatus(status: any): OrderStatus {
     );
   }
   return status;
+}
+
+export function isValidOrderCategory(category: any): category is OrderCategory {
+  return (
+    typeof category === "string" &&
+    validOrderCategories.includes(category as OrderCategory)
+  );
+}
+
+export function validateOrderCategory(category: any): OrderCategory {
+  if (!isValidOrderCategory(category)) {
+    throw new Error(
+      `Invalid order category: ${category}. Must be one of: ${validOrderCategories.join(
+        ", "
+      )}`
+    );
+  }
+  return category;
 }
 
 export function getNextOrderStatus(currentStatus: OrderStatus): OrderStatus {

@@ -7,6 +7,7 @@ import {
   validateOrderTitle,
   validateOrderDescription,
   validateOrderPrice,
+  validateOrderCategory,
 } from "../../../lib/validation";
 
 export default authenticated(
@@ -56,6 +57,7 @@ export default authenticated(
         const validatedTitle = validateOrderTitle(title);
         const validatedDescription = validateOrderDescription(description);
         const validatedBudget = validateOrderPrice(budget);
+        const validatedCategory = validateOrderCategory(category);
 
         if (!category || typeof category !== "string") {
           throw new Error("Category is required");
@@ -88,7 +90,7 @@ export default authenticated(
               buyer_id: userId,
               title: validatedTitle,
               description: validatedDescription,
-              category,
+              category: validatedCategory,
               budget: validatedBudget,
               status: "open",
             },
