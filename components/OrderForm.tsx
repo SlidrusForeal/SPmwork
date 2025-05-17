@@ -20,6 +20,19 @@ const initialFormData: OrderFormData = {
   budget: "",
 };
 
+const categoryTranslations: Record<string, string> = {
+  resource_gathering: "Добыча ресурсов",
+  building_construction: "Постройка зданий",
+  building_design: "Проектировка зданий",
+  drawing: "Рисование картинок",
+  art_redesign: "Перестройка артов",
+  fanfic_writing: "Написание фанфиков",
+  farm_building: "Постройка ферм",
+  development: "Разработка",
+  design: "Дизайн",
+  other: "Другое",
+};
+
 export function OrderForm() {
   const router = useRouter();
   const [formData, setFormData] = useState<OrderFormData>(initialFormData);
@@ -159,12 +172,12 @@ export function OrderForm() {
           name="category"
           value={formData.category}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-white"
           required
         >
           {validOrderCategories.map((category) => (
             <option key={category} value={category}>
-              {category.charAt(0).toUpperCase() + category.slice(1)}
+              {categoryTranslations[category]}
             </option>
           ))}
         </select>

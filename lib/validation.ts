@@ -8,10 +8,15 @@ const validOrderStatuses: OrderStatus[] = [
 ];
 
 export const validOrderCategories = [
+  "resource_gathering",
+  "building_construction",
+  "building_design",
+  "drawing",
+  "art_redesign",
+  "fanfic_writing",
+  "farm_building",
   "development",
   "design",
-  "writing",
-  "marketing",
   "other",
 ] as const;
 
