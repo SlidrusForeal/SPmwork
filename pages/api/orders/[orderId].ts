@@ -1,4 +1,4 @@
-// pages/api/orders/[orderId]/offers/index.ts
+// pages/api/orders/[orderId].ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { authenticated } from "../../../lib/auth";
 import { supabase } from "../../../lib/supabaseClient";
@@ -7,51 +7,42 @@ async function handler(
   req: NextApiRequest & { user?: any },
   res: NextApiResponse
 ) {
+  if (req.method !== "GET") {
+    res.setHeader("Allow", ["GET"]);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
+
   const { orderId } = req.query as { orderId: string };
   const userId = req.user?.id;
 
-  if (req.method === "GET") {
+  try {
     const { data, error } = await supabase
-      .from("offers")
+      .from("orders")
       .select("*")
-      .eq("order_id", orderId)
-      .order("created_at", { ascending: true });
-    if (error) return res.status(500).json({ error: error.message });
-    return res.status(200).json({ offers: data });
-  }
-
-  if (req.method === "POST") {
-    const { price, delivery_time, message } = req.body as {
-      price: number;
-      delivery_time: number;
-      message: string;
-    };
-    if (
-      typeof price !== "number" ||
-      typeof delivery_time !== "number" ||
-      typeof message !== "string"
-    ) {
-      return res.status(400).json({ error: "Invalid payload" });
-    }
-    const { data, error } = await supabase
-      .from("offers")
-      .insert([
-        {
-          order_id: orderId,
-          seller_id: userId,
-          price,
-          delivery_time,
-          message,
-        },
-      ])
-      .select()
+      .eq("id", orderId)
       .single();
-    if (error) return res.status(500).json({ error: error.message });
-    return res.status(201).json({ offer: data });
-  }
 
-  res.setHeader("Allow", ["GET", "POST"]);
-  res.status(405).end(`Method ${req.method} Not Allowed`);
+    if (error) {
+      console.error("Error fetching order:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    // Only allow access if the order is open or the user is the buyer
+    if (data.status !== "open" && data.buyer_id !== userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    return res.status(200).json({ order: data });
+  } catch (e: any) {
+    console.error("Unexpected error fetching order:", e);
+    return res
+      .status(500)
+      .json({ error: e.message || "Internal Server Error" });
+  }
 }
 
 export default authenticated(handler);

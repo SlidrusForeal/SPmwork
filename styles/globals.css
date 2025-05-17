@@ -50,12 +50,14 @@
   .form-input,
   .form-textarea,
   .form-select {
-    @apply block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500;
+    @apply block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500
+    dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400
+    dark:focus:ring-blue-500 dark:focus:border-blue-500;
   }
   .form-input:disabled,
   .form-textarea:disabled,
   .form-select:disabled {
-    @apply bg-gray-100 cursor-not-allowed;
+    @apply bg-gray-100 dark:bg-gray-700 cursor-not-allowed;
   }
   .is-invalid {
     @apply border-red-500 focus:ring-red-500;

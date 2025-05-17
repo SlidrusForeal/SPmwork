@@ -17,6 +17,7 @@
         "@vercel/analytics": "^1.5.0",
         "@vercel/speed-insights": "^1.2.0",
         "cookie": "^1.0.2",
+        "date-fns": "^4.1.0",
         "framer-motion": "^12.10.5",
         "jsonwebtoken": "^9.0.2",
         "lodash.debounce": "^4.0.8",
