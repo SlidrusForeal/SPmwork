@@ -60,16 +60,11 @@ export default authenticated(
           throw new Error("Category is required");
         }
 
-        // Check user's active orders count using raw SQL with proper enum casting
-        const { count: activeOrders, error: countError } = await supabase
-          .from("orders")
-          .select("*", { count: "exact" })
-          .eq("buyer_id", userId)
-          .filter(
-            "status",
-            "in",
-            `('open'::order_status_enum, 'in_progress'::order_status_enum)`
-          );
+        // Check user's active orders count using raw SQL query to handle both UUID and enum types
+        const { data: activeOrders, error: countError } = await supabase.rpc(
+          "count_active_orders",
+          { user_id: userId }
+        );
 
         if (countError) {
           console.error("Error checking active orders:", countError);
@@ -82,7 +77,7 @@ export default authenticated(
           });
         }
 
-        // Create the order with proper enum casting
+        // Create the order
         const { data, error } = await supabaseAdmin
           .from("orders")
           .insert([
