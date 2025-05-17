@@ -5,11 +5,56 @@ import Layout from "../../components/Layout";
 import AdminPanel from "../../components/AdminPanel";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
 import { useUser } from "../../lib/useUser";
+import type { User, Order } from "../../types";
+
+interface AdminUser extends User {
+  orders?: number;
+  reviews?: number;
+  messages?: number;
+}
+
+interface AdminOrder extends Order {
+  buyer: {
+    username: string;
+    minecraft_username?: string;
+  };
+  seller: {
+    user: {
+      username: string;
+      minecraft_username?: string;
+    };
+  };
+}
+
+interface Report {
+  id: string;
+  reporter: {
+    username: string;
+    minecraft_username?: string;
+  };
+  reported: {
+    username: string;
+    minecraft_username?: string;
+  };
+  order?: {
+    id: string;
+    title: string;
+  };
+  message?: {
+    id: string;
+    content: string;
+  };
+  reason: string;
+  status: "pending" | "resolved" | "rejected";
+  admin_comment?: string;
+  created_at: string;
+  resolved_at?: string;
+}
 
 interface AdminPageProps {
-  users: any[];
-  orders: any[];
-  reports: any[];
+  users: AdminUser[];
+  orders: AdminOrder[];
+  reports: Report[];
 }
 
 export default function AdminPage({ users, orders, reports }: AdminPageProps) {
@@ -41,7 +86,9 @@ export default function AdminPage({ users, orders, reports }: AdminPageProps) {
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async ({ req }) => {
+export const getServerSideProps: GetServerSideProps<AdminPageProps> = async ({
+  req,
+}) => {
   // Проверяем авторизацию на сервере
   const {
     data: { user },
@@ -76,24 +123,26 @@ export const getServerSideProps: GetServerSideProps = async ({ req }) => {
     await Promise.all([
       supabaseAdmin
         .from("users")
-        .select("*")
+        .select(
+          "*, orders:orders(count), reviews:reviews(count), messages:messages(count)"
+        )
         .order("created_at", { ascending: false }),
       supabaseAdmin
         .from("orders")
         .select(
           `
-        *,
-        buyer:users!orders_buyer_id_fkey (
-          username,
-          minecraft_username
-        ),
-        seller:offers!inner (
-          user:users (
+          *,
+          buyer:users!orders_buyer_id_fkey (
             username,
             minecraft_username
+          ),
+          seller:offers!inner (
+            user:users (
+              username,
+              minecraft_username
+            )
           )
-        )
-      `
+        `
         )
         .order("created_at", { ascending: false })
         .limit(100),
@@ -101,16 +150,24 @@ export const getServerSideProps: GetServerSideProps = async ({ req }) => {
         .from("reports")
         .select(
           `
-        *,
-        reporter:users!reports_reporter_id_fkey (
-          username,
-          minecraft_username
-        ),
-        reported:users!reports_reported_id_fkey (
-          username,
-          minecraft_username
-        )
-      `
+          *,
+          reporter:users!reports_reporter_id_fkey (
+            username,
+            minecraft_username
+          ),
+          reported:users!reports_reported_id_fkey (
+            username,
+            minecraft_username
+          ),
+          order:orders (
+            id,
+            title
+          ),
+          message:messages (
+            id,
+            content
+          )
+        `
         )
         .order("created_at", { ascending: false })
         .limit(100),

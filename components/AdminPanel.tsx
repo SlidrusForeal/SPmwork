@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useUser } from "../lib/useUser";
 import { supabase } from "../lib/supabaseClient";
-import { User } from "../types";
+import type { User, Order } from "../types";
 import { Button } from "./ui/Button";
 import { Input } from "./ui";
 import {
@@ -16,10 +16,54 @@ import ReportList from "./ReportList";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
 
+interface AdminUser extends User {
+  orders?: number;
+  reviews?: number;
+  messages?: number;
+}
+
+interface AdminOrder extends Order {
+  buyer: {
+    username: string;
+    minecraft_username?: string;
+  };
+  seller: {
+    user: {
+      username: string;
+      minecraft_username?: string;
+    };
+  };
+}
+
+interface Report {
+  id: string;
+  reporter: {
+    username: string;
+    minecraft_username?: string;
+  };
+  reported: {
+    username: string;
+    minecraft_username?: string;
+  };
+  order?: {
+    id: string;
+    title: string;
+  };
+  message?: {
+    id: string;
+    content: string;
+  };
+  reason: string;
+  status: "pending" | "resolved" | "rejected";
+  admin_comment?: string;
+  created_at: string;
+  resolved_at?: string;
+}
+
 interface AdminPanelProps {
-  users: User[];
-  orders: any[];
-  reports: any[];
+  users: AdminUser[];
+  orders: AdminOrder[];
+  reports: Report[];
 }
 
 export default function AdminPanel({

@@ -7,15 +7,28 @@ interface DiscordIdentity {
   provider: string;
 }
 
-async function fetchMinecraftProfile(discordId: string) {
+interface MinecraftProfile {
+  minecraftUsername: string;
+  minecraftUuid: string;
+}
+
+interface UserError {
+  message: string;
+  code?: string;
+}
+
+async function fetchMinecraftProfile(
+  discordId: string
+): Promise<MinecraftProfile | null> {
   try {
     const response = await fetch(
       `https://api.discord.com/users/${discordId}/profile`
     );
-    if (!response.ok) return null;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
     const data = await response.json();
-    // Проверяем связанные аккаунты на наличие Minecraft
     const minecraftAccount = data.connected_accounts?.find(
       (account: any) => account.type === "minecraft"
     );
@@ -36,29 +49,37 @@ async function fetchMinecraftProfile(discordId: string) {
 export function useUser() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<UserError | null>(null);
 
   useEffect(() => {
-    // Get initial session
-    const session = supabase.auth.getSession();
+    let mounted = true;
 
-    // Set up auth state listener
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const { data: profile } = await supabase
+    async function initializeUser() {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          setUser(null);
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("*")
-          .eq("id", session.user.id)
+          .eq("id", sessionData.session.user.id)
           .single();
+
+        if (profileError) {
+          throw new Error(profileError.message);
+        }
+
+        if (!mounted) return;
 
         // Если это новый вход через Discord и у пользователя нет minecraft данных
         if (
-          event === "SIGNED_IN" &&
-          session.user.app_metadata.provider === "discord" &&
+          sessionData.session.user.app_metadata.provider === "discord" &&
           (!profile.minecraftUsername || !profile.minecraftUuid)
         ) {
-          const discordIdentity = session.user.identities?.find(
+          const discordIdentity = sessionData.session.user.identities?.find(
             (identity: DiscordIdentity) => identity.provider === "discord"
           );
 
@@ -67,7 +88,7 @@ export function useUser() {
               discordIdentity.id
             );
 
-            if (minecraftProfile) {
+            if (minecraftProfile && mounted) {
               // Обновляем профиль с данными Minecraft
               const { error: updateError } = await supabase
                 .from("profiles")
@@ -75,9 +96,9 @@ export function useUser() {
                   minecraftUsername: minecraftProfile.minecraftUsername,
                   minecraftUuid: minecraftProfile.minecraftUuid,
                 })
-                .eq("id", session.user.id);
+                .eq("id", sessionData.session.user.id);
 
-              if (!updateError) {
+              if (!updateError && mounted) {
                 profile.minecraftUsername = minecraftProfile.minecraftUsername;
                 profile.minecraftUuid = minecraftProfile.minecraftUuid;
               }
@@ -85,17 +106,47 @@ export function useUser() {
           }
         }
 
-        setUser(profile);
-      } else {
-        setUser(null);
+        if (mounted) {
+          setUser(profile);
+          setError(null);
+        }
+      } catch (err) {
+        console.error("Error initializing user:", err);
+        if (mounted) {
+          setError({
+            message: "Не удалось загрузить данные пользователя",
+            code: err instanceof Error ? err.message : undefined,
+          });
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
+    }
+
+    // Set up auth state listener
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        await initializeUser();
+      } else if (event === "SIGNED_OUT") {
+        if (mounted) {
+          setUser(null);
+          setError(null);
+          setLoading(false);
+        }
+      }
     });
 
+    initializeUser();
+
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  return { user, loading };
+  return { user, loading, error };
 }
