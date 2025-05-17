@@ -16,21 +16,22 @@ export const config = {
 
 // Паттерны без якорей, они будут добавлены при создании RegExp
 const ALLOWED_API: Record<string, string[]> = {
-  "/api/orders": ["GET", "POST"],
-  "/api/orders/[^/]+": ["GET"],
-  "/api/orders/[^/]+/offers": ["GET", "POST"],
-  "/api/reviews": ["GET", "POST"],
-  "/api/init-payment": ["POST"],
-  "/api/messages": ["GET", "POST"],
-  "/api/admin/orders": ["GET", "PATCH"],
-  "/api/admin/users": ["GET", "PATCH"],
-  "/api/profile/minecraft": ["POST"],
-  "/api/profile/stats": ["GET"],
-  "/api/auth/me": ["GET"],
-  "/api/auth/discord/login": ["GET"],
-  "/api/auth/discord/callback": ["GET"],
-  "/api/auth/discord/url": ["GET"],
-  "/api/webhook": ["POST"],
+  "^/api/orders$": ["GET", "POST"],
+  "^/api/orders/[^/]+$": ["GET"],
+  "^/api/orders/[^/]+/offers$": ["GET", "POST"],
+  "^/api/reviews$": ["GET", "POST"],
+  "^/api/init-payment$": ["POST"],
+  "^/api/messages$": ["GET", "POST"],
+  "^/api/admin/orders$": ["GET", "PATCH"],
+  "^/api/admin/users$": ["GET", "PATCH"],
+  "^/api/profile/minecraft$": ["POST"],
+  "^/api/profile/stats$": ["GET"],
+  "^/api/auth/me$": ["GET"],
+  "^/api/auth/discord/login$": ["GET"],
+  "^/api/auth/discord/callback$": ["GET"],
+  "^/api/auth/discord/url$": ["GET"],
+  "^/api/auth/logout$": ["GET"],
+  "^/api/webhook$": ["POST"],
 };
 
 function methodAllowed(path: string, method: string): boolean {
