@@ -43,7 +43,9 @@ export default function AdminPage({ users, orders, reports }: AdminPageProps) {
 
 export const getServerSideProps: GetServerSideProps = async ({ req }) => {
   // Проверяем авторизацию на сервере
-  const { user } = await supabaseAdmin.auth.api.getUserByCookie(req);
+  const {
+    data: { user },
+  } = await supabaseAdmin.auth.getUser(req.cookies["sb-access-token"]);
   if (!user) {
     return {
       redirect: {

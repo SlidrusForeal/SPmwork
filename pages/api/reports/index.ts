@@ -2,18 +2,33 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { authenticated } from "../../../lib/auth";
 import { supabase } from "../../../lib/supabaseClient";
 import { apiLimiter } from "../../../lib/rateLimit";
+import type { JWTPayload } from "../../../lib/auth";
+
+interface Report {
+  id: string;
+  reporter_id: string;
+  reported_id: string;
+  order_id?: string;
+  message_id?: string;
+  reason: string;
+  status: "pending" | "resolved" | "rejected";
+  admin_comment?: string;
+  created_at: string;
+  resolved_at?: string;
+}
 
 async function handler(
-  req: NextApiRequest & { user?: any },
+  req: NextApiRequest & { user: JWTPayload },
   res: NextApiResponse
-) {
-  const userId = req.user?.id;
+): Promise<void> {
+  const userId = req.user.id;
 
   if (req.method === "POST") {
     const { reported_id, order_id, message_id, reason } = req.body;
 
     if (!reported_id || !reason) {
-      return res.status(400).json({ error: "Не все поля заполнены" });
+      res.status(400).json({ error: "Не все поля заполнены" });
+      return;
     }
 
     try {
@@ -28,6 +43,7 @@ async function handler(
             reason,
           },
         ])
+        .select()
         .single();
 
       if (error) throw error;
@@ -41,19 +57,21 @@ async function handler(
       if (admins) {
         const notifications = admins.map((admin) => ({
           user_id: admin.id,
-          type: "system_alert",
+          type: "system_alert" as const,
           title: "Новая жалоба",
           message: `Поступила новая жалоба от пользователя`,
-          link: `/admin?tab=reports&id=${report.id}`,
+          link: `/admin?tab=reports&id=${(report as Report).id}`,
         }));
 
         await supabase.from("notifications").insert(notifications);
       }
 
-      return res.status(200).json(report);
+      res.status(200).json(report);
+      return;
     } catch (error) {
       console.error("Error creating report:", error);
-      return res.status(500).json({ error: "Не удалось создать жалобу" });
+      res.status(500).json({ error: "Не удалось создать жалобу" });
+      return;
     }
   }
 
@@ -94,15 +112,18 @@ async function handler(
 
       if (error) throw error;
 
-      return res.status(200).json(reports);
+      res.status(200).json(reports);
+      return;
     } catch (error) {
       console.error("Error fetching reports:", error);
-      return res.status(500).json({ error: "Не удалось загрузить жалобы" });
+      res.status(500).json({ error: "Не удалось загрузить жалобы" });
+      return;
     }
   }
 
   res.setHeader("Allow", ["GET", "POST"]);
   res.status(405).end(`Method ${req.method} Not Allowed`);
+  return;
 }
 
 export default function reportsWithRateLimit(

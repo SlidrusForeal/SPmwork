@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { parse } from "cookie";
 import jwt from "jsonwebtoken";
 
-interface JWTPayload {
+export interface JWTPayload {
   id: string;
   role: string;
   username: string;
@@ -45,7 +45,7 @@ export function authenticated(
   return async (
     req: NextApiRequest & { user?: JWTPayload },
     res: NextApiResponse
-  ) => {
+  ): Promise<void> => {
     // Пытаемся извлечь токен из заголовка Authorization или из cookie
     const authHeader = req.headers.authorization;
     let token: string | undefined;
@@ -58,16 +58,19 @@ export function authenticated(
     }
 
     if (!token) {
-      return res.status(401).json({ error: "Нет токена" });
+      res.status(401).json({ error: "Нет токена" });
+      return;
     }
 
     try {
       // Верификация JWT и передача payload в req.user
       req.user = verifyToken(token);
-      return await handler(req as NextApiRequest & { user: JWTPayload }, res);
+      await handler(req as NextApiRequest & { user: JWTPayload }, res);
+      return;
     } catch (error) {
       console.error("JWT verification error:", error);
-      return res.status(401).json({ error: "Неверный токен" });
+      res.status(401).json({ error: "Неверный токен" });
+      return;
     }
   };
 }
@@ -85,9 +88,11 @@ export function requireRole(allowedRoles: string[]) {
     return authenticated(async (req, res) => {
       const userRole = req.user?.role;
       if (!userRole || !allowedRoles.includes(userRole)) {
-        return res.status(403).json({ error: "Нет доступа" });
+        res.status(403).json({ error: "Нет доступа" });
+        return;
       }
-      return handler(req, res);
+      await handler(req, res);
+      return;
     });
   };
 }

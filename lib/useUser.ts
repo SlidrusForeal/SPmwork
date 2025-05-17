@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
-
-interface User {
-  id: string;
-  username: string;
-  minecraftUsername?: string;
-  minecraftUuid?: string;
-}
+import type { User } from "../types";
 
 interface DiscordIdentity {
   id: string;

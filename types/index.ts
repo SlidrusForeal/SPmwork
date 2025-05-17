@@ -6,7 +6,7 @@ export interface User {
   avatar_url?: string;
   created_at: string;
   updated_at: string;
-  is_admin?: boolean;
+  is_admin: boolean;
   is_banned?: boolean;
   ban_reason?: string;
   role?: "user" | "moderator" | "admin";

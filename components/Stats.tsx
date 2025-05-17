@@ -155,13 +155,13 @@ export default function Stats() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
-                tickFormatter={(date) =>
+                tickFormatter={(date: string) =>
                   format(new Date(date), "d MMM", { locale: ru })
                 }
               />
               <YAxis />
               <Tooltip
-                labelFormatter={(date) =>
+                labelFormatter={(date: string) =>
                   format(new Date(date), "d MMMM yyyy", { locale: ru })
                 }
               />

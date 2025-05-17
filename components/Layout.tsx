@@ -8,14 +8,6 @@ import { supabase } from "../lib/supabaseClient";
 import type { User } from "../types";
 import NotificationsPopover from "./NotificationsPopover";
 
-interface User {
-  id: string;
-  username: string;
-  minecraftUsername?: string;
-  minecraftUuid?: string;
-  role: string;
-}
-
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [dark, setDark] = useState(false);
