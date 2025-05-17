@@ -20,6 +20,34 @@ const initialFormData: OrderFormData = {
   budget: "",
 };
 
+// Группировка категорий по типам
+const categoryGroups = {
+  building: {
+    label: "Строительство",
+    categories: ["building_construction", "building_design", "farm_building"],
+  },
+  art: {
+    label: "Искусство",
+    categories: ["drawing", "art_redesign"],
+  },
+  development: {
+    label: "Разработка",
+    categories: ["development", "design"],
+  },
+  resources: {
+    label: "Ресурсы",
+    categories: ["resource_gathering"],
+  },
+  content: {
+    label: "Контент",
+    categories: ["fanfic_writing"],
+  },
+  other: {
+    label: "Прочее",
+    categories: ["other"],
+  },
+};
+
 const categoryTranslations: Record<string, string> = {
   resource_gathering: "Добыча ресурсов",
   building_construction: "Постройка зданий",
@@ -124,7 +152,7 @@ export function OrderForm() {
       <div>
         <label
           htmlFor="title"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
         >
           Заголовок
         </label>
@@ -143,7 +171,7 @@ export function OrderForm() {
       <div>
         <label
           htmlFor="description"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
         >
           Описание
         </label>
@@ -163,7 +191,7 @@ export function OrderForm() {
       <div>
         <label
           htmlFor="category"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
         >
           Категория
         </label>
@@ -172,13 +200,20 @@ export function OrderForm() {
           name="category"
           value={formData.category}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-white"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm 
+                   focus:border-primary focus:ring-primary sm:text-sm 
+                   bg-white dark:bg-gray-800 dark:border-gray-600 
+                   dark:text-gray-200"
           required
         >
-          {validOrderCategories.map((category) => (
-            <option key={category} value={category}>
-              {categoryTranslations[category]}
-            </option>
+          {Object.entries(categoryGroups).map(([groupKey, group]) => (
+            <optgroup key={groupKey} label={group.label}>
+              {group.categories.map((category) => (
+                <option key={category} value={category}>
+                  {categoryTranslations[category]}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>
@@ -186,7 +221,7 @@ export function OrderForm() {
       <div>
         <label
           htmlFor="budget"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
         >
           Бюджет
         </label>
@@ -203,9 +238,15 @@ export function OrderForm() {
         />
       </div>
 
-      <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Создание..." : "Создать заказ"}
-      </Button>
+      <div className="flex justify-end">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full sm:w-auto"
+        >
+          {isSubmitting ? "Создание..." : "Создать заказ"}
+        </Button>
+      </div>
     </form>
   );
 }

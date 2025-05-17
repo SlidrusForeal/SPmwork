@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { authenticated } from "../../../lib/auth";
 import { supabase } from "../../../lib/supabaseClient";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { snowflakeToUuid } from "../../../lib/utils";
 import {
   validateOrderTitle,
   validateOrderDescription,
@@ -12,7 +13,7 @@ import {
 
 export default authenticated(
   async (req: NextApiRequest & { user: any }, res: NextApiResponse) => {
-    const userId = req.user.id;
+    const userId = snowflakeToUuid(req.user.id);
 
     if (req.method === "GET") {
       try {
