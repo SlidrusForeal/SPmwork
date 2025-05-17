@@ -4,12 +4,14 @@ import { Button } from "./ui";
 
 interface ReviewFormProps {
   orderId: string;
+  targetUserId: string;
   onSubmit: () => void;
-  onCancel?: () => void;
+  onCancel: () => void;
 }
 
 export default function ReviewForm({
   orderId,
+  targetUserId,
   onSubmit,
   onCancel,
 }: ReviewFormProps) {
@@ -32,7 +34,12 @@ export default function ReviewForm({
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, rating, comment }),
+        body: JSON.stringify({
+          orderId,
+          targetUserId,
+          rating,
+          comment,
+        }),
       });
 
       if (!res.ok) {
@@ -89,12 +96,10 @@ export default function ReviewForm({
       {error && <p className="text-red-500 text-sm">{error}</p>}
 
       <div className="flex justify-end gap-3">
-        {onCancel && (
-          <Button variant="ghost" onClick={onCancel} disabled={isSubmitting}>
-            Отмена
-          </Button>
-        )}
-        <Button type="submit" disabled={isSubmitting}>
+        <Button variant="ghost" onClick={onCancel} disabled={isSubmitting}>
+          Отмена
+        </Button>
+        <Button type="submit" disabled={isSubmitting || rating === 0}>
           {isSubmitting ? "Отправка..." : "Отправить отзыв"}
         </Button>
       </div>
