@@ -60,8 +60,8 @@ export default authenticated(
           throw new Error("Category is required");
         }
 
-        // Check user's active orders count using raw SQL query to handle both UUID and enum types
-        const { data: activeOrders, error: countError } = await supabase.rpc(
+        // Check user's active orders count
+        const { data, error: countError } = await supabase.rpc(
           "count_active_orders",
           { user_id: userId }
         );
@@ -71,14 +71,16 @@ export default authenticated(
           throw new Error("Failed to check active orders");
         }
 
-        if (activeOrders && activeOrders >= 10) {
+        const activeOrders = typeof data === "number" ? data : 0;
+
+        if (activeOrders >= 10) {
           return res.status(400).json({
             error: "You cannot have more than 10 active orders",
           });
         }
 
         // Create the order
-        const { data, error } = await supabaseAdmin
+        const { data: newOrder, error } = await supabaseAdmin
           .from("orders")
           .insert([
             {
@@ -98,7 +100,7 @@ export default authenticated(
           return res.status(500).json({ error: error.message });
         }
 
-        return res.status(201).json({ order: data });
+        return res.status(201).json({ order: newOrder });
       } catch (e: any) {
         console.error("Error creating order:", e);
         return res.status(400).json({ error: e.message });
