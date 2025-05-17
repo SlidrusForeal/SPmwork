@@ -3,12 +3,11 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { authenticated } from "../../../lib/auth";
 import { supabase } from "../../../lib/supabaseClient";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { snowflakeToUuid } from "../../../lib/utils";
 import { OrderSchema } from "../../../lib/schemas";
 
 export default authenticated(
   async (req: NextApiRequest & { user: any }, res: NextApiResponse) => {
-    const userId = snowflakeToUuid(req.user.id);
+    const userId = req.user.id; // Используем прямой Discord ID
 
     if (req.method === "GET") {
       try {

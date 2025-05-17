@@ -2,164 +2,198 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { authenticated } from "../../../lib/auth";
 import { supabase } from "../../../lib/supabaseClient";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { apiLimiter } from "../../../lib/rateLimit";
+import { z } from "zod";
 
-type SortOrder = "latest" | "oldest" | "highest" | "lowest";
+interface ReviewRecord {
+  id: string;
+  order_id?: string;
+  message_id?: string;
+  reviewer_id: string;
+  rating: number;
+  comment?: string;
+  created_at: string;
+}
 
-async function handler(
-  req: NextApiRequest & { user?: any },
-  res: NextApiResponse
-) {
-  const userId = req.user?.id;
+interface UserRecord {
+  id: string;
+  discord_username: string;
+  minecraft_username?: string;
+  minecraft_uuid?: string;
+}
 
-  // GET /api/reviews - получить отзывы
+interface EnrichedReview {
+  id: string;
+  orderId?: string;
+  messageId?: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  reviewer: {
+    id: string;
+    username: string;
+    minecraftUsername?: string;
+    minecraftUuid?: string;
+  };
+}
+
+// Schema for review creation
+const ReviewSchema = z.object({
+  order_id: z.string().uuid().optional(),
+  message_id: z.string().optional(),
+  rating: z.number().min(1).max(5),
+  comment: z.string().min(1).max(1000).optional(),
+});
+
+type ApiResponse = {
+  error?: string;
+  details?: z.ZodError["errors"];
+  reviews?: EnrichedReview[];
+  review?: ReviewRecord;
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+};
+
+const handler = async (
+  req: NextApiRequest & { user: any },
+  res: NextApiResponse<ApiResponse>
+) => {
+  const userId = req.user.id;
+
   if (req.method === "GET") {
-    const {
-      orderId,
-      userId: targetUserId,
-      sort = "latest",
-      minRating,
-      maxRating,
-      hasComment,
-      page = "1",
-      limit = "10",
-    } = req.query;
-
-    // Validate sort order
-    if (!["latest", "oldest", "highest", "lowest"].includes(sort as string)) {
-      return res.status(400).json({ error: "Invalid sort order" });
-    }
-
-    // Base query
-    let query = supabase.from("reviews").select(
-      `
-        *,
-        reviewer:users!reviews_reviewer_id_fkey (
-          id,
-          discord_username,
-          minecraft_username,
-          minecraft_uuid
-        )
-      `
-    );
-
-    // Apply filters
-    if (orderId) {
-      query = query.eq("order_id", orderId);
-    }
-    if (targetUserId) {
-      query = query.eq("reviewer_id", targetUserId);
-    }
-    if (minRating) {
-      query = query.gte("rating", parseInt(minRating as string));
-    }
-    if (maxRating) {
-      query = query.lte("rating", parseInt(maxRating as string));
-    }
-    if (hasComment === "true") {
-      query = query.not("comment", "is", null);
-    }
-
-    // Apply sorting
-    switch (sort) {
-      case "oldest":
-        query = query.order("created_at", { ascending: true });
-        break;
-      case "highest":
-        query = query.order("rating", { ascending: false });
-        break;
-      case "lowest":
-        query = query.order("rating", { ascending: true });
-        break;
-      default: // latest
-        query = query.order("created_at", { ascending: false });
-    }
-
-    // Apply pagination
-    const pageNum = Math.max(1, parseInt(page as string));
-    const limitNum = Math.min(50, Math.max(1, parseInt(limit as string)));
-    const from = (pageNum - 1) * limitNum;
-    const to = from + limitNum - 1;
-
-    query = query.range(from, to);
-
-    // Execute query
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.error("Error fetching reviews:", error);
-      return res.status(500).json({ error: "Failed to fetch reviews" });
-    }
-
-    // Transform data
-    const reviews = data.map((review) => ({
-      id: review.id,
-      orderId: review.order_id,
-      rating: review.rating,
-      comment: review.comment,
-      created_at: review.created_at,
-      reviewer: {
-        id: review.reviewer.id,
-        username: review.reviewer.discord_username,
-        minecraftUsername: review.reviewer.minecraft_username,
-        minecraftUuid: review.reviewer.minecraft_uuid,
-      },
-    }));
-
-    return res.status(200).json({
-      reviews,
-      pagination: {
-        page: pageNum,
-        limit: limitNum,
-        total: count,
-        hasMore: count ? from + reviews.length < count : false,
-      },
-    });
-  }
-
-  // POST /api/reviews - создать отзыв
-  if (req.method === "POST") {
-    const { orderId, rating, comment } = req.body;
-
-    if (!orderId || !rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: "Invalid review data" });
-    }
-
     try {
-      // Проверяем, существует ли уже отзыв для этого заказа
-      const { data: existingReview } = await supabase
-        .from("reviews")
-        .select("id")
-        .eq("order_id", orderId)
-        .single();
+      // 1. Fetch reviews with pagination
+      const page = parseInt((req.query.page as string) || "1", 10);
+      const limit = parseInt((req.query.limit as string) || "10", 10);
+      const offset = (page - 1) * limit;
 
-      if (existingReview) {
-        return res
-          .status(400)
-          .json({ error: "Review already exists for this order" });
+      const {
+        data: reviews,
+        error: reviewsError,
+        count,
+      } = await supabase
+        .from("reviews")
+        .select(
+          "id, order_id, message_id, reviewer_id, rating, comment, created_at",
+          { count: "exact" }
+        )
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (reviewsError) {
+        console.error("Error fetching reviews:", reviewsError);
+        return res.status(500).json({ error: reviewsError.message });
       }
 
-      // Создаем отзыв и обновляем статус заказа
-      const { data, error } = await supabaseAdmin.rpc("create_review", {
-        p_order_id: orderId,
-        p_reviewer_id: userId,
-        p_rating: rating,
-        p_comment: comment,
+      // 2. Fetch user details for reviewers
+      const reviewerIds = Array.from(
+        new Set((reviews || []).map((r) => r.reviewer_id))
+      );
+      let users: UserRecord[] = [];
+
+      if (reviewerIds.length > 0) {
+        const { data: userData, error: usersError } = await supabase
+          .from("users")
+          .select("id, discord_username, minecraft_username, minecraft_uuid")
+          .in("id", reviewerIds);
+
+        if (usersError) {
+          console.error("Error fetching users:", usersError);
+          return res.status(500).json({ error: usersError.message });
+        }
+
+        users = userData || [];
+      }
+
+      // 3. Map users by ID for efficient lookup
+      const userMap: Record<string, UserRecord> = {};
+      users.forEach((u) => {
+        userMap[u.id] = u;
       });
+
+      // 4. Enrich reviews with reviewer info
+      const enrichedReviews = (reviews || []).map((r) => ({
+        id: r.id,
+        orderId: r.order_id,
+        messageId: r.message_id,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.created_at,
+        reviewer: {
+          id: r.reviewer_id,
+          username: userMap[r.reviewer_id]?.discord_username || "Unknown User",
+          minecraftUsername: userMap[r.reviewer_id]?.minecraft_username,
+          minecraftUuid: userMap[r.reviewer_id]?.minecraft_uuid,
+        },
+      }));
+
+      return res.status(200).json({
+        reviews: enrichedReviews,
+        pagination: {
+          total: count || 0,
+          page,
+          limit,
+          pages: Math.ceil((count || 0) / limit),
+        },
+      });
+    } catch (e: any) {
+      console.error("Error in reviews GET endpoint:", e);
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  if (req.method === "POST") {
+    try {
+      // Validate request body
+      const result = ReviewSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Invalid data",
+          details: result.error.errors,
+        });
+      }
+
+      const validatedData = result.data;
+
+      // Create the review
+      const { data: newReview, error } = await supabase
+        .from("reviews")
+        .insert([
+          {
+            reviewer_id: userId,
+            order_id: validatedData.order_id,
+            message_id: validatedData.message_id,
+            rating: validatedData.rating,
+            comment: validatedData.comment,
+          },
+        ])
+        .select()
+        .single();
 
       if (error) {
         console.error("Error creating review:", error);
-        return res.status(500).json({ error: "Failed to create review" });
+        return res.status(500).json({ error: error.message });
       }
 
-      return res.status(201).json({ review: data });
-    } catch (e) {
-      console.error("Unexpected error creating review:", e);
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(201).json({ review: newReview });
+    } catch (e: any) {
+      console.error("Error in reviews POST endpoint:", e);
+      return res.status(400).json({ error: e.message });
     }
   }
 
   res.setHeader("Allow", ["GET", "POST"]);
   return res.status(405).end(`Method ${req.method} Not Allowed`);
-}
+};
 
-export default authenticated(handler);
+// Apply rate limiter to the authenticated handler
+export default function reviewsWithRateLimit(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  return apiLimiter(req, res, authenticated(handler));
+}
