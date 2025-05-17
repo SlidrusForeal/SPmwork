@@ -3,6 +3,11 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { authenticated } from "../../../lib/auth";
 import { supabase } from "../../../lib/supabaseClient";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import {
+  validateOrderTitle,
+  validateOrderDescription,
+  validateOrderPrice,
+} from "../../../lib/validation";
 
 export default authenticated(
   async (req: NextApiRequest & { user: any }, res: NextApiResponse) => {
@@ -43,27 +48,60 @@ export default authenticated(
     }
 
     if (req.method === "POST") {
-      const { title, description, category, budget } = req.body;
-      if (!title || !description || typeof budget !== "number") {
-        return res.status(400).json({ error: "Неправильные данные заказа" });
-      }
-
       try {
+        const { title, description, category, budget } = req.body;
+
+        // Validate all fields
+        const validatedTitle = validateOrderTitle(title);
+        const validatedDescription = validateOrderDescription(description);
+        const validatedBudget = validateOrderPrice(budget);
+
+        if (!category || typeof category !== "string") {
+          throw new Error("Category is required");
+        }
+
+        // Check user's active orders count
+        const { count: activeOrders, error: countError } = await supabase
+          .from("orders")
+          .select("*", { count: "exact" })
+          .eq("buyer_id", userId)
+          .in("status", ["open", "in_progress"]);
+
+        if (countError) {
+          throw new Error("Failed to check active orders");
+        }
+
+        if (activeOrders && activeOrders >= 10) {
+          return res.status(400).json({
+            error: "You cannot have more than 10 active orders",
+          });
+        }
+
+        // Create the order
         const { data, error } = await supabaseAdmin
           .from("orders")
-          .insert([{ buyer_id: userId, title, description, category, budget }])
+          .insert([
+            {
+              buyer_id: userId,
+              title: validatedTitle,
+              description: validatedDescription,
+              category,
+              budget: validatedBudget,
+              status: "open",
+            },
+          ])
           .select()
           .single();
+
         if (error) {
           console.error("Ошибка создания заказа:", error);
           return res.status(500).json({ error: error.message });
         }
+
         return res.status(201).json({ order: data });
       } catch (e: any) {
-        console.error("Unexpected error при создании заказа:", e);
-        return res
-          .status(500)
-          .json({ error: e.message || "Internal Server Error" });
+        console.error("Error creating order:", e);
+        return res.status(400).json({ error: e.message });
       }
     }
 
