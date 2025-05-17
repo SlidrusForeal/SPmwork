@@ -4,12 +4,7 @@ import { authenticated } from "../../../lib/auth";
 import { supabase } from "../../../lib/supabaseClient";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { snowflakeToUuid } from "../../../lib/utils";
-import {
-  validateOrderTitle,
-  validateOrderDescription,
-  validateOrderPrice,
-  validateOrderCategory,
-} from "../../../lib/validation";
+import { OrderSchema } from "../../../lib/schemas";
 
 export default authenticated(
   async (req: NextApiRequest & { user: any }, res: NextApiResponse) => {
@@ -52,17 +47,16 @@ export default authenticated(
 
     if (req.method === "POST") {
       try {
-        const { title, description, category, budget } = req.body;
-
-        // Validate all fields
-        const validatedTitle = validateOrderTitle(title);
-        const validatedDescription = validateOrderDescription(description);
-        const validatedBudget = validateOrderPrice(budget);
-        const validatedCategory = validateOrderCategory(category);
-
-        if (!category || typeof category !== "string") {
-          throw new Error("Category is required");
+        // Validate request body using Zod schema
+        const result = OrderSchema.safeParse(req.body);
+        if (!result.success) {
+          return res.status(400).json({
+            error: "Неверные данные",
+            details: result.error.errors,
+          });
         }
+
+        const validatedData = result.data;
 
         // Check user's active orders count
         const { data, error: countError } = await supabase.rpc(
@@ -89,10 +83,10 @@ export default authenticated(
           .insert([
             {
               buyer_id: userId,
-              title: validatedTitle,
-              description: validatedDescription,
-              category: validatedCategory,
-              budget: validatedBudget,
+              title: validatedData.title,
+              description: validatedData.description,
+              category: validatedData.category,
+              budget: validatedData.budget,
               status: "open",
             },
           ])

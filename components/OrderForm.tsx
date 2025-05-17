@@ -5,19 +5,13 @@ import Input from "./ui/Input";
 import Textarea from "./ui/Textarea";
 import { ErrorAlert } from "./ui/ErrorAlert";
 import { validOrderCategories } from "../lib/validation";
+import { OrderSchema, type OrderInput } from "../lib/schemas";
 
-interface OrderFormData {
-  title: string;
-  description: string;
-  category: string;
-  budget: string;
-}
-
-const initialFormData: OrderFormData = {
+const initialFormData: OrderInput = {
   title: "",
   description: "",
   category: "development",
-  budget: "",
+  budget: 0,
 };
 
 // Группировка категорий по типам
@@ -63,7 +57,7 @@ const categoryTranslations: Record<string, string> = {
 
 export function OrderForm() {
   const router = useRouter();
-  const [formData, setFormData] = useState<OrderFormData>(initialFormData);
+  const [formData, setFormData] = useState<OrderInput>(initialFormData);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -73,48 +67,20 @@ export function OrderForm() {
     >
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "budget" ? Number(value) : value,
+    }));
     setError(null); // Clear error when user makes changes
-  };
-
-  const validateForm = (): string | null => {
-    if (
-      !formData.title ||
-      formData.title.length < 5 ||
-      formData.title.length > 100
-    ) {
-      return "Заголовок должен быть от 5 до 100 символов";
-    }
-
-    if (
-      !formData.description ||
-      formData.description.length < 20 ||
-      formData.description.length > 2000
-    ) {
-      return "Описание должно быть от 20 до 2000 символов";
-    }
-
-    if (!validOrderCategories.includes(formData.category as any)) {
-      return `Категория должна быть одной из: ${validOrderCategories.join(
-        ", "
-      )}`;
-    }
-
-    const budget = Number(formData.budget);
-    if (isNaN(budget) || budget <= 0 || budget > 1000000) {
-      return "Бюджет должен быть числом от 1 до 1,000,000";
-    }
-
-    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Client-side validation
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
+    // Client-side validation using Zod
+    const result = OrderSchema.safeParse(formData);
+    if (!result.success) {
+      setError(result.error.errors[0].message);
       return;
     }
 
@@ -125,10 +91,7 @@ export function OrderForm() {
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          budget: Number(formData.budget),
-        }),
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -229,7 +192,7 @@ export function OrderForm() {
           id="budget"
           name="budget"
           type="number"
-          value={formData.budget}
+          value={formData.budget || ""}
           onChange={handleChange}
           placeholder="Введите бюджет (от 1 до 1,000,000)"
           required

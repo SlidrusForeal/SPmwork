@@ -14,10 +14,11 @@ export const config = {
   ],
 };
 
+// Паттерны без якорей, они будут добавлены при создании RegExp
 const ALLOWED_API: Record<string, string[]> = {
   "/api/orders": ["GET", "POST"],
-  "/api/orders/[^/]+$": ["GET"],
-  "/api/orders/[^/]+/offers$": ["GET", "POST"],
+  "/api/orders/[^/]+": ["GET"],
+  "/api/orders/[^/]+/offers": ["GET", "POST"],
   "/api/reviews": ["GET", "POST"],
   "/api/init-payment": ["POST"],
   "/api/messages": ["GET", "POST"],
@@ -32,14 +33,16 @@ const ALLOWED_API: Record<string, string[]> = {
   "/api/webhook": ["POST"],
 };
 
-function methodAllowed(path: string, method: string) {
+function methodAllowed(path: string, method: string): boolean {
+  // Проверяем каждый паттерн
   for (const pattern in ALLOWED_API) {
-    const regex = new RegExp(`^${pattern}`);
+    const regex = new RegExp(`^${pattern}$`);
     if (regex.test(path)) {
       return ALLOWED_API[pattern].includes(method);
     }
   }
-  return true;
+  // По умолчанию блокируем неописанные пути
+  return false;
 }
 
 export function middleware(req: NextRequest) {
@@ -49,8 +52,16 @@ export function middleware(req: NextRequest) {
     // 1) Блокируем неподдерживаемые методы
     if (!methodAllowed(pathname, req.method)) {
       return NextResponse.json(
-        { error: "Method Not Allowed" },
-        { status: 405 }
+        {
+          error: "Method Not Allowed",
+          allowedMethods: getAllowedMethods(pathname),
+        },
+        {
+          status: 405,
+          headers: {
+            Allow: getAllowedMethods(pathname).join(", "),
+          },
+        }
       );
     }
     // 2) Пропускаем проверку JWT в middleware —
@@ -60,4 +71,15 @@ export function middleware(req: NextRequest) {
 
   // Для всех прочих (страницы, статика) — пропускаем
   return NextResponse.next();
+}
+
+// Вспомогательная функция для получения разрешенных методов
+function getAllowedMethods(path: string): string[] {
+  for (const pattern in ALLOWED_API) {
+    const regex = new RegExp(`^${pattern}$`);
+    if (regex.test(path)) {
+      return ALLOWED_API[pattern];
+    }
+  }
+  return [];
 }

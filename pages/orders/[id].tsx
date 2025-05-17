@@ -131,7 +131,7 @@ export default function OrderDetail() {
 
     // подписка на новые сообщения
     const channel = supabase
-      .channel(`public:messages`)
+      .channel(`order:${id}`)
       .on(
         "postgres_changes",
         {
