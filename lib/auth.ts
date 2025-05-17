@@ -1,29 +1,51 @@
 // lib/auth.ts
-import jwt from "jsonwebtoken";
+import { NextApiRequest, NextApiResponse } from "next";
 import { parse } from "cookie";
-import type { NextApiRequest, NextApiResponse } from "next";
+import jwt from "jsonwebtoken";
+
+interface JWTPayload {
+  id: string;
+  role: string;
+  username: string;
+  iat?: number;
+  exp?: number;
+}
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
 /**
  * Генерирует JWT с полезной нагрузкой и сроком действия 7 дней
  */
-export function signToken(payload: object) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+export function signToken(payload: Omit<JWTPayload, "iat" | "exp">): string {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not set");
+  }
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
 }
 
 /**
  * Проверяет валидность JWT и возвращает payload
  */
-export function verifyToken(token: string) {
-  return jwt.verify(token, JWT_SECRET);
+export function verifyToken(token: string): JWTPayload {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not set");
+  }
+  return jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
 }
 
 /**
  * Оборачивает API-хендлер, проверяя наличие и корректность JWT
  */
-export function authenticated(handler: any) {
-  return async (req: NextApiRequest & { user?: any }, res: NextApiResponse) => {
+export function authenticated(
+  handler: (
+    req: NextApiRequest & { user: JWTPayload },
+    res: NextApiResponse
+  ) => Promise<void | NextApiResponse>
+) {
+  return async (
+    req: NextApiRequest & { user?: JWTPayload },
+    res: NextApiResponse
+  ) => {
     // Пытаемся извлечь токен из заголовка Authorization или из cookie
     const authHeader = req.headers.authorization;
     let token: string | undefined;
@@ -41,9 +63,10 @@ export function authenticated(handler: any) {
 
     try {
       // Верификация JWT и передача payload в req.user
-      req.user = verifyToken(token) as any;
-      return await handler(req, res);
-    } catch {
+      req.user = verifyToken(token);
+      return await handler(req as NextApiRequest & { user: JWTPayload }, res);
+    } catch (error) {
+      console.error("JWT verification error:", error);
       return res.status(401).json({ error: "Неверный токен" });
     }
   };
@@ -53,12 +76,18 @@ export function authenticated(handler: any) {
  * Проверяет наличие роли в списке allowedRoles
  */
 export function requireRole(allowedRoles: string[]) {
-  return (handler: any) =>
-    async (req: NextApiRequest & { user?: any }, res: NextApiResponse) => {
+  return (
+    handler: (
+      req: NextApiRequest & { user: JWTPayload },
+      res: NextApiResponse
+    ) => Promise<void | NextApiResponse>
+  ) => {
+    return authenticated(async (req, res) => {
       const userRole = req.user?.role;
       if (!userRole || !allowedRoles.includes(userRole)) {
         return res.status(403).json({ error: "Нет доступа" });
       }
       return handler(req, res);
-    };
+    });
+  };
 }

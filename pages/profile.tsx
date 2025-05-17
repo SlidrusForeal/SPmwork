@@ -1,5 +1,5 @@
 // pages/profile.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import useSWR from "swr";
 import Skeleton from "react-loading-skeleton";
 import Image from "next/image";
@@ -23,16 +23,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [autoLinked, setAutoLinked] = useState(false);
 
-  // Автопривязка через SPWorlds
-  useEffect(() => {
-    if (!data || autoLinked) return;
-    const { user } = data;
-    if (!user.minecraftUsername) {
-      linkMinecraft();
-    }
-  }, [data]);
-
-  const linkMinecraft = async () => {
+  const linkMinecraft = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/profile/minecraft", { method: "POST" });
@@ -44,7 +35,25 @@ export default function Profile() {
       setLoading(false);
       setAutoLinked(true);
     }
-  };
+  }, [mutate]);
+
+  // Автопривязка через SPWorlds
+  useEffect(() => {
+    let mounted = true;
+
+    async function autoLink() {
+      if (!data?.user || autoLinked) return;
+      if (!data.user.minecraftUsername && mounted) {
+        await linkMinecraft();
+      }
+    }
+
+    autoLink();
+
+    return () => {
+      mounted = false;
+    };
+  }, [data, autoLinked, linkMinecraft]);
 
   if (error) {
     return (

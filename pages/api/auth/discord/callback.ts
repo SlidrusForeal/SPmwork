@@ -4,11 +4,9 @@ import {
   getDiscordAuthUrl,
   handleDiscordCallback,
 } from "../../../../lib/authProviders";
+import { authLimiter } from "../../../../lib/rateLimit";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const codeParam = req.query.code as string | undefined;
   console.log("Discord callback code:", codeParam);
   if (!codeParam) {
@@ -28,3 +26,5 @@ export default async function handler(
       .send(`<h1>Ошибка авторизации через Discord</h1><p>${err.message}</p>`);
   }
 }
+
+export default authLimiter(handler);
