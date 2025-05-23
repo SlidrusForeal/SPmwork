@@ -21,9 +21,11 @@ export interface Order {
   id: string;
   title: string;
   description: string;
-  price: number;
+  budget: number;
   status: OrderStatus;
   buyer_id: string;
+  category?: string;
+  imageUrl?: string;
   created_at: string;
   updated_at: string;
 }
@@ -33,7 +35,8 @@ export interface Offer {
   order_id: string;
   seller_id: string;
   price: number;
-  description: string;
+  message: string;
+  delivery_time?: number;
   status: "pending" | "accepted" | "rejected";
   created_at: string;
 }
@@ -57,6 +60,7 @@ export interface Review {
   id: string;
   order_id: string;
   reviewer_id: string;
+  target_user_id?: string;
   rating: number;
   comment?: string;
   created_at: string;

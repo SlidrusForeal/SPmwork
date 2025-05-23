@@ -13,22 +13,15 @@ import useSWR from "swr";
 import { fetcher } from "../../lib/fetcher";
 import { useUser } from "../../lib/useUser";
 import { NextSeo } from "next-seo";
+import type { Order, Offer, Review as GlobalReview, User } from "../../types"; // Adjusted path
 
-interface Review {
-  id: string;
-  rating: number;
-  comment: string;
-  created_at: string;
-  reviewer_id: string;
-  reviewer: {
-    username: string;
-    minecraftUsername?: string;
-    minecraftUuid?: string;
-  };
+// Local type for reviews that includes the populated reviewer details
+interface Review extends GlobalReview {
+  reviewer: Pick<User, "username" | "minecraftUsername" | "minecraftUuid">;
 }
 
 interface ReviewsResponse {
-  reviews: Review[];
+  reviews: Review[]; // Use the local, hydrated Review type
   pagination: {
     hasMore: boolean;
   };
@@ -39,8 +32,8 @@ export default function OrderDetail() {
   const { id } = router.query as { id?: string };
   const { user } = useUser();
 
-  const [order, setOrder] = useState<any | null>(null);
-  const [offers, setOffers] = useState<any[] | null>(null);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [offers, setOffers] = useState<Offer[] | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -65,34 +58,34 @@ export default function OrderDetail() {
   const [messages, setMessages] = useState<any[]>([]);
   const [chatText, setChatText] = useState("");
 
-  // 1) Загрузка заказа и проверка статуса
+  // 1) Загрузка заказа, офферов и проверка статуса
   useEffect(() => {
     if (!id) return;
+    setError(null); // Reset error on new fetch
 
-    // Fetch order details first
     fetch(`/api/orders/${id}`, { credentials: "same-origin" })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Ошибка ${res.status}`);
+      .then(async (res) => {
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({})); // Try to parse error
+          throw new Error(errData.error || `Ошибка ${res.status}`);
+        }
         return res.json();
       })
       .then((data) => {
-        setOrder(data.order);
-        // Set accepted state based on order status
+        if (!data.order) {
+          throw new Error("Order data not found in response");
+        }
+        setOrder(data.order as Order);
+        setOffers((data.offers || []) as Offer[]);
         setAccepted(
           data.order.status === "in_progress" ||
             data.order.status === "completed"
         );
       })
-      .catch((e: any) => setError(e.message));
-
-    // Then fetch offers
-    fetch(`/api/orders/${id}/offers`, { credentials: "same-origin" })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Ошибка ${res.status}`);
-        return res.json();
-      })
-      .then((data) => setOffers(data.offers))
-      .catch((e: any) => setError(e.message));
+      .catch((e: any) => {
+        console.error("Failed to fetch order details:", e);
+        setError(e.message);
+      });
   }, [id]);
 
   // 2) Принятие оффера
@@ -104,16 +97,33 @@ export default function OrderDetail() {
       });
       if (!res.ok) throw new Error(`Ошибка ${res.status}`);
       setAccepted(true);
-      // Refresh order status
-      const orderRes = await fetch(`/api/orders/${id}`, {
-        credentials: "same-origin",
-      });
-      if (orderRes.ok) {
-        const data = await orderRes.json();
-        setOrder(data.order);
-      }
+      // Refresh order data (order and offers)
+      // The API now returns both, so we can simplify the refresh
+      fetch(`/api/orders/${id}`, { credentials: "same-origin" })
+        .then(async (res) => {
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `Ошибка ${res.status}`);
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (data.order) {
+            setOrder(data.order as Order);
+          }
+          // Optionally update offers as well if they might change,
+          // though acceptOffer primarily changes order status.
+          // For simplicity, we're mainly focused on re-setting order status here.
+        })
+        .catch((e: any) => {
+          // Instead of alert, set an error state or use a toast notification
+          console.error("Failed to refresh order after accepting offer:", e);
+          setError(`Не удалось обновить заказ: ${e.message}`);
+        });
     } catch (e: any) {
-      alert(e.message || "Не удалось принять оффер");
+      // alert(e.message || "Не удалось принять оффер");
+      console.error("Failed to accept offer:", e);
+      setError(`Не удалось принять оффер: ${e.message}`);
     }
   };
 
@@ -161,18 +171,23 @@ export default function OrderDetail() {
       if (!res.ok) throw new Error(`Ошибка ${res.status}`);
       setChatText("");
     } catch (e: any) {
-      alert(e.message || "Не удалось отправить сообщение");
+      // alert(e.message || "Не удалось отправить сообщение");
+      console.error("Failed to send message:", e);
+      setError(`Не удалось отправить сообщение: ${e.message}`);
     }
   };
 
   // Add this section before the return statement
+  const acceptedOffer = offers?.find((offer) => offer.status === "accepted");
   const canReview =
     order?.status === "completed" &&
-    !reviewsData?.reviews?.some(
-      (review) =>
-        review.reviewer_id === order.buyer_id ||
-        review.reviewer_id === order.seller_id
-    );
+    user && // Ensure user is loaded
+    reviewsData?.reviews && // Ensure reviews are loaded
+    !reviewsData.reviews.some((review) => {
+      // Check if the current logged-in user (buyer or seller) has already submitted a review for this order.
+      // This assumes reviewsData.reviews are already filtered by the current orderId.
+      return review.reviewer_id === user.id;
+    });
 
   const isOrderParticipant =
     user &&

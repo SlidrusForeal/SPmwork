@@ -74,7 +74,13 @@ async function handler(
     });
 
     if (acceptErr) {
-      return res.status(500).json({ error: "Failed to accept offer" });
+      console.error(
+        `Error in accept_offer RPC for offer ${offerId} and order ${offer.order_id}:`,
+        acceptErr
+      );
+      return res
+        .status(500)
+        .json({ error: `Failed to accept offer: ${acceptErr.message}` });
     }
 
     return res.status(200).json({ ok: true });

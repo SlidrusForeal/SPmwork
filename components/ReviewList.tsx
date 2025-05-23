@@ -7,7 +7,7 @@ import { ru } from "date-fns/locale";
 interface Review {
   id: string;
   rating: number;
-  comment: string;
+  comment?: string;
   created_at: string;
   reviewer: {
     username: string;

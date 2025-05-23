@@ -1,14 +1,22 @@
 // components/Filters.tsx
 import { FormEvent, useState, useEffect } from "react";
 import debounce from "lodash.debounce";
-import { Search } from "lucide-react";
+import {
+  Search,
+  ArrowDownUp,
+  CalendarDays,
+  Star,
+  ListFilter,
+} from "lucide-react";
 
 export interface FiltersType {
-  q?: string;
+  searchTerm?: string;
   category?: string;
   minBudget?: number;
   maxBudget?: number;
   status?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
   dateFrom?: string;
   dateTo?: string;
   rating?: number;
@@ -19,38 +27,55 @@ interface FiltersProps {
 }
 
 export default function Filters({ onChange }: FiltersProps) {
-  const [q, setQ] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [category, setCategory] = useState("");
   const [minBudget, setMinBudget] = useState<number>();
   const [maxBudget, setMaxBudget] = useState<number>();
   const [status, setStatus] = useState("");
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [rating, setRating] = useState<number>();
 
-  const debounced = debounce((f: FiltersType) => onChange(f), 300);
+  const debounced = debounce((f: FiltersType) => onChange(f), 500);
   useEffect(() => {
     debounced({
-      q,
+      searchTerm,
       category,
       minBudget,
       maxBudget,
       status,
+      sortBy,
+      sortOrder,
       dateFrom,
       dateTo,
       rating,
     });
     return () => debounced.cancel();
-  }, [q, category, minBudget, maxBudget, status, dateFrom, dateTo, rating]);
+  }, [
+    searchTerm,
+    category,
+    minBudget,
+    maxBudget,
+    status,
+    sortBy,
+    sortOrder,
+    dateFrom,
+    dateTo,
+    rating,
+  ]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onChange({
-      q,
+      searchTerm,
       category,
       minBudget,
       maxBudget,
       status,
+      sortBy,
+      sortOrder,
       dateFrom,
       dateTo,
       rating,
@@ -58,27 +83,27 @@ export default function Filters({ onChange }: FiltersProps) {
   };
 
   return (
-    <div className="sticky top-0 bg-white dark:bg-gray-900 z-10 py-4">
+    <div className="sticky top-0 bg-background dark:bg-background-dark z-10 py-4 mb-6 border-b border-border dark:border-border-dark">
       <form
         onSubmit={handleSubmit}
-        className="flex flex-wrap gap-4 mb-6"
+        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
         aria-label="Фильтры заказов"
       >
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+        <div className="relative col-span-full sm:col-span-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4" />
           <input
-            placeholder="Поиск..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="form-input pl-10"
-            aria-label="Поиск по заголовку"
+            placeholder="Поиск по названию/описанию..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="form-input pl-10 w-full"
+            aria-label="Поиск по названию или описанию"
           />
         </div>
         <input
           placeholder="Категория"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="form-input"
+          className="form-input w-full"
           aria-label="Фильтр по категории"
         />
         <input
@@ -92,7 +117,7 @@ export default function Filters({ onChange }: FiltersProps) {
             }
           }}
           min="0"
-          className="form-input w-36"
+          className="form-input w-full"
           aria-label="Минимальный бюджет"
         />
         <input
@@ -106,57 +131,41 @@ export default function Filters({ onChange }: FiltersProps) {
             }
           }}
           min="0"
-          className="form-input w-36"
+          className="form-input w-full"
           aria-label="Максимальный бюджет"
         />
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="form-select"
+          className="form-select w-full"
           aria-label="Фильтр по статусу"
         >
-          <option value="">Все статусы</option>
-          <option value="open">open</option>
-          <option value="in_progress">in_progress</option>
-          <option value="completed">completed</option>
-          <option value="dispute">dispute</option>
+          <option value="">По умолчанию (открытые)</option>
+          <option value="open">Открытые</option>
+          <option value="in_progress">В процессе</option>
+          <option value="completed">Завершенные</option>
+          <option value="dispute">Спорные</option>
         </select>
-        <input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          className="form-input"
-          aria-label="Дата с"
-        />
-        <input
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          className="form-input"
-          aria-label="Дата по"
-        />
+
         <select
-          value={rating ?? ""}
-          onChange={(e) =>
-            setRating(e.target.value ? +e.target.value : undefined)
-          }
-          className="form-select w-28"
-          aria-label="Фильтр по рейтингу"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="form-select w-full"
+          aria-label="Сортировать по"
         >
-          <option value="">Рейтинг</option>
-          {[5, 4, 3, 2, 1].map((n) => (
-            <option key={n} value={n}>
-              {n}★
-            </option>
-          ))}
+          <option value="created_at">Дате</option>
+          <option value="budget">Бюджету</option>
         </select>
-        <button
-          type="submit"
-          className="btn-primary"
-          aria-label="Применить фильтры"
+
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+          className="form-select w-full"
+          aria-label="Порядок сортировки"
         >
-          Применить
-        </button>
+          <option value="desc">Убыванию</option>
+          <option value="asc">Возрастанию</option>
+        </select>
       </form>
     </div>
   );

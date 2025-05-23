@@ -1,5 +1,5 @@
 // pages/orders/index.tsx
-import React, { useRef, useCallback, useState } from "react";
+import React, { useRef, useCallback, useState, useMemo } from "react";
 import useSWRInfinite from "swr/infinite";
 import { useRouter } from "next/router";
 import Skeleton from "react-loading-skeleton";
@@ -12,11 +12,23 @@ import Head from "next/head";
 
 const PAGE_SIZE = 10;
 const getKey = (pageIndex: number, prev: any, filters: FiltersType) => {
-  if (prev && !prev.orders.length) return null;
+  if (prev && prev.orders && prev.orders.length === 0) return null;
+  if (
+    prev &&
+    prev.total !== undefined &&
+    pageIndex * PAGE_SIZE >= prev.total &&
+    pageIndex > 0
+  )
+    return null;
+
   const params = new URLSearchParams();
   params.append("page", (pageIndex + 1).toString());
   params.append("limit", PAGE_SIZE.toString());
-  Object.entries(filters).forEach(([k, v]) => v && params.append(k, String(v)));
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") {
+      params.append(k, String(v));
+    }
+  });
   return `/api/orders?${params.toString()}`;
 };
 
@@ -32,8 +44,20 @@ export default function OrdersPage() {
 
   // 2) Производные состояния
   const orders = data ? data.flatMap((page) => page.orders) : [];
-  const total = data?.[0]?.total ?? 0;
-  const isReachingEnd = orders.length >= total;
+  const isLoadingInitialData = !data && isValidating;
+  const isLoadingMore = isLoadingInitialData ? false : isValidating;
+
+  const totalOrders = data?.[0]?.total ?? 0;
+  const isReachingEnd = useMemo(() => {
+    if (!data || data.length === 0) return false;
+    const lastPage = data[data.length - 1];
+    if (!lastPage || !lastPage.orders) return false;
+    const loadedCount = data.reduce(
+      (acc, page) => acc + (page.orders?.length || 0),
+      0
+    );
+    return loadedCount >= totalOrders;
+  }, [data, totalOrders]);
 
   // 3) Инфинит‑скролл
   const observer = useRef<IntersectionObserver>();
@@ -52,7 +76,7 @@ export default function OrdersPage() {
   );
 
   // 4) Skeleton‑заглушка
-  if (!data && isValidating) {
+  if (isLoadingInitialData) {
     return (
       <Layout>
         <Head>
@@ -141,9 +165,18 @@ export default function OrdersPage() {
         </section>
       )}
 
-      {isValidating && (
+      {isLoadingMore && (
         <p className="text-center mt-6">Загрузка дополнительных заказов...</p>
       )}
+
+      {!isLoadingMore &&
+        !isLoadingInitialData &&
+        orders.length > 0 &&
+        isReachingEnd && (
+          <p className="text-center mt-6 text-gray-500">
+            Все заказы загружены.
+          </p>
+        )}
 
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
